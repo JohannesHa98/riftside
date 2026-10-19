@@ -16,10 +16,7 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <div>
-      <PageHeader
-        title="Sign in"
-        description="Anyone can look. Only you can change things."
-      />
+      <PageHeader title="Sign in" />
 
       <Suspense fallback={<div className="h-40" aria-hidden />}>
         <Gate />
