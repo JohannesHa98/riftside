@@ -156,6 +156,30 @@ the four fields it needs.
 - Build in small steps. `npm run build` must pass before each commit.
 - Commit after each working step with a clear message. **Ask before pushing.**
 
+## Verifying changes
+
+Match the check to the risk. This is a small project; over-verifying costs
+real time and context for no benefit.
+
+**Always, before committing:** `npm run build`, `npm run lint`, `npm test`.
+They are fast and catch most of it.
+
+**Open a browser only** when a change introduces new runtime behaviour that
+crosses a boundary the build cannot see: hydration, a server action, a new
+database write, or client state wired to one of those. A hydration mismatch is
+the standing example — invisible to build, lint and tests alike.
+
+**Do not** open a browser for CSS, copy, labels, or layout tweaks.
+
+When a check is warranted, prefer the cheap probe — `curl | grep`, or one
+JavaScript expression returning the few values in question — over screenshots,
+which are the most expensive thing to put in context. Screenshot only when the
+question really is "does this look right", and then once, not per state.
+
+The exception worth keeping: the database is live and the app has no login, so
+a bad write is the one thing that is awkward to undo. Exercise a new
+database-write path once, end to end, before trusting it.
+
 ## Note on AGENTS.md
 
 `AGENTS.md` is generated and re-added by `next dev`. Leave its contents alone;
