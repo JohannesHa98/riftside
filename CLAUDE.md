@@ -118,6 +118,23 @@ The UI shows the **top 3 suggestions** so one can be chosen, or rerolled.
 - Elo-style automatic power adjustment from wins and losses
 - Player stats: win rate, games played
 
+## Layout
+
+```
+app/
+  players/     list, add, edit, delete  (actions.ts, player-form.tsx)
+  new-game/    pick ten, balance, save  (actions.ts, team-picker.tsx)
+  history/     past games, set winner   (actions.ts, winner-buttons.tsx)
+components/    shared UI (nav, cards, badges, primitives)
+db/            schema, client, queries, migrations
+lib/           types, player mapping, balance.ts + balance.test.ts
+```
+
+The balancer runs in the browser, not on the server: it is pure and the
+whole search is 126 splits, so it costs less than a round trip and lets
+the selection re-rank instantly. Server components hand the client only
+the four fields it needs.
+
 ## Conventions
 
 - Server Components by default; Server Actions for mutations. No extra state
