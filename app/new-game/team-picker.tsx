@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { ComfortBadge } from "@/components/comfort-badge";
@@ -186,16 +185,7 @@ export function TeamPicker({
             <TeamCard team={chosenSuggestion.red} side="red" />
           </section>
 
-          {canEdit ? (
-            <SaveTeams suggestion={chosenSuggestion} />
-          ) : (
-            <p className="rounded-lg border border-line bg-panel px-4 py-3 text-sm text-ink-dim">
-              <Link href="/login" className="text-gold underline">
-                Sign in
-              </Link>{" "}
-              to save this game to the history.
-            </p>
-          )}
+          {canEdit ? <SaveTeams suggestion={chosenSuggestion} /> : null}
         </>
       ) : null}
     </div>

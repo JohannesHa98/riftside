@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Suspense } from "react";
 
 import { ComfortBadge } from "@/components/comfort-badge";
@@ -49,14 +48,7 @@ async function Roster() {
             />
           </div>
         </details>
-      ) : (
-        <p className="mb-6 rounded-lg border border-line bg-panel px-4 py-3 text-sm text-ink-dim">
-          <Link href="/login" className="text-gold underline">
-            Sign in
-          </Link>{" "}
-          to add or change players.
-        </p>
-      )}
+      ) : null}
 
       {everyone.length === 0 ? (
         <EmptyState>

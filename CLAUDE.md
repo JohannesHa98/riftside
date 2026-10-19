@@ -65,6 +65,10 @@ is public** — anyone can browse the roster, run the balancer and read history.
   action means adding a guard — `lib/auth.test.ts` covers forged, expired and
   `alg: none` tokens, but it cannot catch an unguarded action.
 - Rotating `AUTH_SECRET` invalidates every existing session.
+- **Nothing links to `/login`.** There is one account, so a sign-in link would
+  only advertise the way in. Go to `/login` directly. Signed out, the nav shows
+  no auth control at all; signed in, it shows Sign out. The page is `noindex`.
+  Do not add a sign-in link back without asking.
 
 ## Environment
 

@@ -40,7 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col font-sans">
         <SiteNav
           sessionSlot={
-            <Suspense fallback={<span className="w-16" aria-hidden />}>
+            <Suspense fallback={null}>
               <SessionControls />
             </Suspense>
           }
