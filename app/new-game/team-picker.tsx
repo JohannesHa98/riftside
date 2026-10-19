@@ -84,11 +84,11 @@ export function TeamPicker({ roster }: { roster: BalancePlayer[] }) {
             return (
               <label
                 key={player.id}
-                className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+                className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
                   isSelected
                     ? "border-gold/50 bg-gold/5"
                     : "border-line bg-panel hover:border-ink-dim/50"
-                } ${full ? "cursor-not-allowed opacity-40" : ""}`}
+                } ${full ? "opacity-40" : ""}`}
               >
                 <input
                   type="checkbox"

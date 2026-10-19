@@ -105,7 +105,7 @@ export function PlayerForm({
 
                 <div className="flex gap-1">
                   {COMFORTS.map((comfort) => (
-                    <label key={comfort} className="cursor-pointer">
+                    <label key={comfort}>
                       <input
                         type="radio"
                         name={role}

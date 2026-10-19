@@ -3,11 +3,11 @@ import type { ReactNode } from "react";
 /** Shared button looks, used on both buttons and links. */
 export const buttonStyles = {
   primary:
-    "inline-flex items-center justify-center gap-2 rounded-md bg-gold px-4 py-2 text-sm font-semibold text-surface transition-colors hover:bg-gold/85 disabled:cursor-not-allowed disabled:opacity-50",
+    "inline-flex items-center justify-center gap-2 rounded-md bg-gold px-4 py-2 text-sm font-semibold text-surface transition-colors hover:bg-gold/85 disabled:opacity-50",
   secondary:
-    "inline-flex items-center justify-center gap-2 rounded-md border border-line bg-raised px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-ink-dim disabled:cursor-not-allowed disabled:opacity-50",
+    "inline-flex items-center justify-center gap-2 rounded-md border border-line bg-raised px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-ink-dim disabled:opacity-50",
   danger:
-    "inline-flex items-center justify-center gap-2 rounded-md border border-bad/40 px-3 py-2 text-sm font-medium text-bad transition-colors hover:bg-bad/10 disabled:cursor-not-allowed disabled:opacity-50",
+    "inline-flex items-center justify-center gap-2 rounded-md border border-bad/40 px-3 py-2 text-sm font-medium text-bad transition-colors hover:bg-bad/10 disabled:opacity-50",
 } as const;
 
 export const inputStyles =

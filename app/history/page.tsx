@@ -46,7 +46,7 @@ async function Matches() {
 function MatchCard({ match }: { match: MatchSummary }) {
   return (
     <details className="rounded-lg border border-line bg-panel">
-      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 select-none">
+      <summary className="flex list-none flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 select-none">
         <time
           dateTime={match.playedAt.toISOString()}
           className="text-sm text-ink-dim tabular-nums"

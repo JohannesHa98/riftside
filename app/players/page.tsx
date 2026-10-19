@@ -20,7 +20,7 @@ export default function PlayersPage() {
       />
 
       <details className="mb-6 rounded-lg border border-line bg-panel">
-        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold select-none">
+        <summary className="list-none px-4 py-3 text-sm font-semibold select-none">
           + Add player
         </summary>
         <div className="border-t border-line p-4">
@@ -80,7 +80,7 @@ function PlayerRow({ player }: { player: Player }) {
         player.archived ? "opacity-60" : ""
       }`}
     >
-      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 select-none">
+      <summary className="flex list-none flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 select-none">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10 text-sm font-semibold text-gold">
           {player.power}
         </span>

@@ -33,6 +33,31 @@ body {
   color: var(--color-ink);
 }
 
+/*
+ * Tailwind v4's preflight leaves interactive elements on the default arrow
+ * cursor. Put the pointer back in one place, rather than hanging a
+ * cursor-pointer utility off every button.
+ */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  label:has(input[type="checkbox"]:not(:disabled)),
+  label:has(input[type="radio"]:not(:disabled)) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  label:has(input:disabled) {
+    cursor: not-allowed;
+  }
+}
+
 /* Keep focus rings visible against the dark background. */
 :focus-visible {
   outline: 2px solid var(--color-gold);
