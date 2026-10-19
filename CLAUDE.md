@@ -141,10 +141,12 @@ The UI shows the **top 3 suggestions** so one can be chosen, or rerolled.
 
 ## Pages
 
-1. **Players** — list, add, edit, delete players with power level and per-role comfort
-2. **New game** — pick 10 players, run the balancer, show both teams side by side with total power, suggested roles, and each player's comfort on that role
-3. **Record result** — save a played game (teams, optional roles, winner)
-4. **History** — past games
+Ordered as they appear in the nav — New game first, since that is what the
+site gets opened for.
+
+1. **New game** — pick 10 players, run the balancer, show both teams side by side with total power, suggested roles, and each player's comfort on that role, then save the played game (teams, optional roles, winner)
+2. **Players** — list, add, edit, delete players with power level and per-role comfort
+3. **History** — past games, and filling in a winner afterwards
 
 ## Planned later (do not build yet, but do not design it out)
 

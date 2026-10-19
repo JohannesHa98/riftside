@@ -7,9 +7,10 @@ import { SplurreToggle } from "./splurre-toggle";
 
 import type { ReactNode } from "react";
 
+// New game first: it is what the site is opened for.
 const LINKS = [
-  { href: "/players", label: "Players" },
   { href: "/new-game", label: "New game" },
+  { href: "/players", label: "Players" },
   { href: "/history", label: "History" },
 ] as const;
 
