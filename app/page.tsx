@@ -11,7 +11,7 @@ const SECTIONS = [
   {
     href: "/players",
     title: "Players",
-    description: "Power levels and the roles everyone is happy to play.",
+    description: "Power levels and role preferences for everyone in the group.",
   },
   {
     href: "/history",

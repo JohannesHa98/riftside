@@ -27,11 +27,11 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 /**
- * What players see. The stored values stay good/ok/bad; these labels answer
- * the question actually being asked — will you play this role?
+ * What players see. The stored values stay good/ok/bad; these labels use the
+ * words League players already use for the same three answers.
  */
 export const COMFORT_LABELS: Record<Comfort, string> = {
-  good: "Yes",
-  ok: "Maybe",
-  bad: "No",
+  good: "Main",
+  ok: "Fill",
+  bad: "Never",
 };
