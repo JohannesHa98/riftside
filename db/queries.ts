@@ -1,4 +1,4 @@
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import { db } from "./index";
 import { players } from "./schema";
@@ -9,4 +9,13 @@ export async function listPlayers() {
     .select()
     .from(players)
     .orderBy(asc(players.archived), asc(players.name));
+}
+
+/** Players available to pick for a game. */
+export async function listActivePlayers() {
+  return db
+    .select()
+    .from(players)
+    .where(eq(players.archived, false))
+    .orderBy(asc(players.name));
 }
