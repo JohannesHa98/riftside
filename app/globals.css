@@ -85,8 +85,18 @@ body {
   }
 }
 
-/* Keep focus rings visible against the dark background. */
+/*
+ * Keep focus rings visible against the dark background.
+ *
+ * The ring is drawn outside the element, where a neighbour's background
+ * happily paints over it — nav links sit 4px apart, which is exactly the
+ * ring's reach. Lifting the focused element a layer up keeps the whole ring
+ * on top. Any ancestor that scrolls needs padding to match, or it clips the
+ * ring instead; z-index cannot escape a scroll container.
+ */
 :focus-visible {
   outline: 2px solid var(--color-gold);
   outline-offset: 2px;
+  position: relative;
+  z-index: 1;
 }

@@ -30,7 +30,12 @@ export function SiteNav({ sessionSlot }: { sessionSlot: ReactNode }) {
         </Link>
 
         <div className="flex items-center gap-2">
-          <nav className="-mx-1 flex items-center gap-1 overflow-x-auto">
+          {/*
+            p-1.5 is not decoration: this scrolls sideways on narrow screens,
+            and setting overflow-x forces overflow-y to clip too, so a focus
+            ring on any link would be sliced off without room to draw in.
+          */}
+          <nav className="-m-1.5 flex items-center gap-1 overflow-x-auto p-1.5">
             {LINKS.map((link) => {
               const active =
                 pathname === link.href || pathname.startsWith(`${link.href}/`);
