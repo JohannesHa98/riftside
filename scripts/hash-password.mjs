@@ -7,9 +7,29 @@
  * anywhere by this script — only the hash is printed. Imports the same module
  * the app verifies with, so the two cannot drift apart.
  */
+import { randomInt } from "node:crypto";
 import { createInterface } from "node:readline";
 
 import { hashPassword } from "../lib/password.ts";
+
+// `npm run auth:new` makes a strong password for you and prints it once.
+// `npm run auth:hash` asks for one you already have.
+const generating = process.argv.includes("--generate");
+
+if (generating) {
+  const password = generatePassword();
+
+  console.log();
+  console.log("Your new password. Save it before closing this window:");
+  console.log();
+  console.log("    " + password);
+  console.log();
+  console.log("Add this to .env.local and to the Vercel project settings:");
+  console.log();
+  console.log("ADMIN_PASSWORD_HASH=" + (await hashPassword(password)));
+  console.log();
+  process.exit(0);
+}
 
 const password = await readPassword("Password (not shown as you type): ");
 
@@ -27,6 +47,22 @@ if (password.length < 12) {
 
 console.log("\nAdd this to .env.local and to the Vercel project settings:\n");
 console.log(`ADMIN_PASSWORD_HASH=${await hashPassword(password)}\n`);
+
+/**
+ * 20 characters of randomness, from an alphabet with no look-alikes (no
+ * 0/O/1/l/I), so it survives being read off a screen. Roughly 115 bits —
+ * nobody is guessing it.
+ */
+function generatePassword() {
+  const alphabet = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let password = "";
+
+  for (let i = 0; i < 20; i++) {
+    password += alphabet[randomInt(alphabet.length)];
+  }
+
+  return password;
+}
 
 function readPassword(prompt) {
   // Piped input (echo 'pw' | npm run auth:hash) has no terminal to mute.

@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "auth:hash": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/hash-password.mjs"
+    "auth:hash": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/hash-password.mjs",
+    "auth:new": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/hash-password.mjs --generate"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

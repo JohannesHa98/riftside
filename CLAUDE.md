@@ -45,7 +45,8 @@ That changes how data loading works:
 | `npm test` | Vitest (run once) |
 | `npm run db:generate` | Generate a SQL migration from schema changes |
 | `npm run db:migrate` | Apply migrations |
-| `npm run auth:hash` | Hash a password for `ADMIN_PASSWORD_HASH` |
+| `npm run auth:new` | Generate a strong password and its hash |
+| `npm run auth:hash` | Hash a password you already have |
 
 ## Auth
 
