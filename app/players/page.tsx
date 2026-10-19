@@ -16,7 +16,7 @@ export default function PlayersPage() {
     <div>
       <PageHeader
         title="Players"
-        description="Power is how good someone is overall. Role comfort only decides who plays where."
+        description="Power is how good someone is overall. The roles they will play only decide who goes where."
       />
 
       <details className="mb-6 rounded-lg border border-line bg-panel">

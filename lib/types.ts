@@ -26,8 +26,12 @@ export const ROLE_LABELS: Record<Role, string> = {
   support: "Support",
 };
 
+/**
+ * What players see. The stored values stay good/ok/bad; these labels answer
+ * the question actually being asked — will you play this role?
+ */
 export const COMFORT_LABELS: Record<Comfort, string> = {
-  good: "Good",
-  ok: "OK",
-  bad: "Bad",
+  good: "Yes",
+  ok: "Maybe",
+  bad: "No",
 };

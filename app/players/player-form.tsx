@@ -89,7 +89,7 @@ export function PlayerForm({
 
       <fieldset>
         <legend className="mb-2 text-xs font-medium text-ink-dim uppercase">
-          Role comfort
+          Happy to play
         </legend>
 
         <div className="space-y-2">

@@ -63,6 +63,11 @@ not set up and should not be.
 overall), and a comfort level per role (`top`, `jungle`, `mid`, `adc`,
 `support`) of `good` | `ok` | `bad`.
 
+Those three are the stored values and the names used throughout the code. The
+UI shows them as **Yes / Maybe / No**, because what is really being asked is
+"will you play this role?" — `COMFORT_LABELS` in `lib/types.ts` is the only
+place that mapping lives, so the wording can change without a migration.
+
 **Match** — date, the two teams, the suggested role per player (optional, since
 the teams may change them), and which team won.
 

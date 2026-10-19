@@ -166,7 +166,7 @@ export function TeamPicker({ roster }: { roster: BalancePlayer[] }) {
 
           {ranked.length === 1 ? (
             <p className="mt-2 text-xs text-ink-dim">
-              Only one split avoids putting someone on a role they are bad at.
+              Only one split avoids putting someone on a role they said no to.
             </p>
           ) : null}
         </section>
@@ -221,9 +221,9 @@ function SuggestionRow({
       </span>
 
       <span className="ml-auto text-xs">
-        <span className="text-good">{suggestion.goodCount} good</span>
+        <span className="text-good">{suggestion.goodCount} yes</span>
         {suggestion.badCount > 0 ? (
-          <span className="text-bad"> · {suggestion.badCount} bad</span>
+          <span className="text-bad"> · {suggestion.badCount} no</span>
         ) : null}
       </span>
 
