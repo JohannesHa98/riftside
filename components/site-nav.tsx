@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { SplurreToggle } from "./splurre-toggle";
+
 const LINKS = [
   { href: "/players", label: "Players" },
   { href: "/new-game", label: "New game" },
@@ -19,26 +21,31 @@ export function SiteNav() {
           <span className="text-gold">In-house</span> League
         </Link>
 
-        <nav className="-mx-1 flex items-center gap-1 overflow-x-auto">
-          {LINKS.map((link) => {
-            const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
+        <div className="flex items-center gap-2">
+          <nav className="-mx-1 flex items-center gap-1 overflow-x-auto">
+            {LINKS.map((link) => {
+              const active =
+                pathname === link.href || pathname.startsWith(`${link.href}/`);
 
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={active ? "page" : undefined}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ${
-                  active
-                    ? "bg-raised text-ink"
-                    : "text-ink-dim hover:bg-raised/60 hover:text-ink"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors ${
+                    active
+                      ? "bg-raised text-ink"
+                      : "text-ink-dim hover:bg-raised/60 hover:text-ink"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <SplurreToggle />
+        </div>
       </div>
     </header>
   );

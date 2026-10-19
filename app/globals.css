@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 /*
- * Dark-only palette. The site is a gaming tool used in the evening; there is
- * no light mode to switch to.
+ * Dark is the default palette — it is an evening tool. The Splurre toggle
+ * swaps in the light values below by stamping data-theme="light" on <html>.
  */
 @theme {
   --color-surface: #0a0d13;
@@ -26,6 +26,33 @@
 
 :root {
   color-scheme: dark;
+}
+
+/*
+ * Light palette. Only the tokens change, so every utility built on them
+ * follows, alpha variants (bg-gold/10 and friends) included. The accent and
+ * status colours are darkened here: the dark-mode values are tuned for
+ * contrast against near-black and would wash out on white.
+ *
+ * Unlayered on purpose, so it beats the @layer theme block above.
+ */
+[data-theme="light"] {
+  --color-surface: #f4f6fa;
+  --color-panel: #ffffff;
+  --color-raised: #e8ecf4;
+  --color-line: #d3dae6;
+  --color-ink: #141a24;
+  --color-ink-dim: #5b6678;
+
+  --color-gold: #8a6a28;
+  --color-blue-side: #2f6fd0;
+  --color-red-side: #cf3b36;
+
+  --color-good: #157f3d;
+  --color-okay: #64748b;
+  --color-bad: #bd2f2a;
+
+  color-scheme: light;
 }
 
 body {
