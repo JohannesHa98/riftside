@@ -4,9 +4,14 @@ import { count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db, matchPlayers, players } from "@/db";
+import { isSignedIn, requireSignedIn } from "@/lib/auth";
 import { COMFORTS, MAX_POWER, MIN_POWER, ROLES, type Comfort } from "@/lib/types";
 
 export type PlayerFormState = { ok: true; at: number } | { error: string } | null;
+
+const SIGNED_OUT = {
+  error: "You are signed out. Sign in again to save this.",
+} as const;
 
 /** Postgres unique-violation. */
 const UNIQUE_VIOLATION = "23505";
@@ -72,6 +77,8 @@ export async function createPlayer(
   _previous: PlayerFormState,
   formData: FormData,
 ): Promise<PlayerFormState> {
+  if (!(await isSignedIn())) return SIGNED_OUT;
+
   const parsed = parsePlayerForm(formData);
   if ("error" in parsed) return parsed;
 
@@ -94,6 +101,8 @@ export async function updatePlayer(
   _previous: PlayerFormState,
   formData: FormData,
 ): Promise<PlayerFormState> {
+  if (!(await isSignedIn())) return SIGNED_OUT;
+
   const parsed = parsePlayerForm(formData);
   if ("error" in parsed) return parsed;
 
@@ -116,6 +125,8 @@ export async function updatePlayer(
  * deleted, so past matches keep their full rosters.
  */
 export async function deletePlayer(id: number): Promise<void> {
+  await requireSignedIn();
+
   const [{ played }] = await db
     .select({ played: count() })
     .from(matchPlayers)
@@ -132,6 +143,8 @@ export async function deletePlayer(id: number): Promise<void> {
 }
 
 export async function restorePlayer(id: number): Promise<void> {
+  await requireSignedIn();
+
   await db.update(players).set({ archived: false }).where(eq(players.id, id));
 
   revalidatePath("/players");

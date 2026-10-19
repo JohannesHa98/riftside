@@ -7,6 +7,7 @@ import {
   type MatchParticipant,
   type MatchSummary,
 } from "@/db/queries";
+import { isSignedIn } from "@/lib/auth";
 import { ROLE_LABELS, type Team } from "@/lib/types";
 
 import { WinnerButtons } from "./winner-buttons";
@@ -24,7 +25,7 @@ export default function HistoryPage() {
 }
 
 async function Matches() {
-  const matches = await listMatches();
+  const [matches, canEdit] = await Promise.all([listMatches(), isSignedIn()]);
 
   if (matches.length === 0) {
     return (
@@ -37,13 +38,19 @@ async function Matches() {
   return (
     <div className="space-y-3">
       {matches.map((match) => (
-        <MatchCard key={match.id} match={match} />
+        <MatchCard key={match.id} match={match} canEdit={canEdit} />
       ))}
     </div>
   );
 }
 
-function MatchCard({ match }: { match: MatchSummary }) {
+function MatchCard({
+  match,
+  canEdit,
+}: {
+  match: MatchSummary;
+  canEdit: boolean;
+}) {
   return (
     <details className="rounded-lg border border-line bg-panel">
       <summary className="flex list-none flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 select-none">
@@ -73,9 +80,11 @@ function MatchCard({ match }: { match: MatchSummary }) {
           <Lineup side="red" players={match.red} winner={match.winner} />
         </div>
 
-        <div className="mt-4 border-t border-line pt-3">
-          <WinnerButtons matchId={match.id} winner={match.winner} />
-        </div>
+        {canEdit ? (
+          <div className="mt-4 border-t border-line pt-3">
+            <WinnerButtons matchId={match.id} winner={match.winner} />
+          </div>
+        ) : null}
       </div>
     </details>
   );

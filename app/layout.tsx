@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { Suspense } from "react";
+
+import { SessionControls } from "@/components/session-controls";
 import { SiteNav } from "@/components/site-nav";
 import { themeScript } from "@/components/splurre-toggle";
 
@@ -35,7 +38,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="flex min-h-full flex-col font-sans">
-        <SiteNav />
+        <SiteNav
+          sessionSlot={
+            <Suspense fallback={<span className="w-16" aria-hidden />}>
+              <SessionControls />
+            </Suspense>
+          }
+        />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
           {children}
         </main>

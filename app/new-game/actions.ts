@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db, matchPlayers, matches, players } from "@/db";
+import { requireSignedIn } from "@/lib/auth";
 import { PLAYERS_PER_GAME, TEAM_SIZE } from "@/lib/balance";
 import { ROLES, TEAMS, type Role, type Team } from "@/lib/types";
 
@@ -46,6 +47,8 @@ function assertValid(input: SaveMatchInput): void {
  * taken from the client, so the snapshot in match_players is trustworthy.
  */
 export async function saveMatch(input: SaveMatchInput): Promise<void> {
+  await requireSignedIn();
+
   assertValid(input);
 
   const slots = [

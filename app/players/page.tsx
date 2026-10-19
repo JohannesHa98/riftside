@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { ComfortBadge } from "@/components/comfort-badge";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { listPlayers } from "@/db/queries";
 import type { Player } from "@/db/schema";
+import { isSignedIn } from "@/lib/auth";
 import { comfortOf } from "@/lib/player";
 import { ROLES } from "@/lib/types";
 
@@ -19,15 +21,6 @@ export default function PlayersPage() {
         description="Power is how good someone is overall. The roles they will play only decide who goes where."
       />
 
-      <details className="mb-6 rounded-lg border border-line bg-panel">
-        <summary className="list-none px-4 py-3 text-sm font-semibold select-none">
-          + Add player
-        </summary>
-        <div className="border-t border-line p-4">
-          <PlayerForm action={createPlayer} submitLabel="Add player" resetOnSuccess />
-        </div>
-      </details>
-
       <Suspense fallback={<RosterSkeleton />}>
         <Roster />
       </Suspense>
@@ -36,63 +29,106 @@ export default function PlayersPage() {
 }
 
 async function Roster() {
-  const everyone = await listPlayers();
+  const [everyone, canEdit] = await Promise.all([listPlayers(), isSignedIn()]);
+
   const active = everyone.filter((player) => !player.archived);
   const retired = everyone.filter((player) => player.archived);
 
-  if (everyone.length === 0) {
-    return <EmptyState>No players yet. Add the first one above.</EmptyState>;
-  }
-
   return (
-    <div className="space-y-8">
-      <section className="space-y-2">
-        <h2 className="text-xs font-semibold text-ink-dim uppercase">
-          {active.length} active
-        </h2>
-        {active.length === 0 ? (
-          <EmptyState>Everyone is retired.</EmptyState>
-        ) : (
-          active.map((player) => <PlayerRow key={player.id} player={player} />)
-        )}
-      </section>
+    <>
+      {canEdit ? (
+        <details className="mb-6 rounded-lg border border-line bg-panel">
+          <summary className="list-none px-4 py-3 text-sm font-semibold select-none">
+            + Add player
+          </summary>
+          <div className="border-t border-line p-4">
+            <PlayerForm
+              action={createPlayer}
+              submitLabel="Add player"
+              resetOnSuccess
+            />
+          </div>
+        </details>
+      ) : (
+        <p className="mb-6 rounded-lg border border-line bg-panel px-4 py-3 text-sm text-ink-dim">
+          <Link href="/login" className="text-gold underline">
+            Sign in
+          </Link>{" "}
+          to add or change players.
+        </p>
+      )}
 
-      {retired.length > 0 ? (
-        <section className="space-y-2">
-          <h2 className="text-xs font-semibold text-ink-dim uppercase">
-            {retired.length} retired
-          </h2>
-          {retired.map((player) => (
-            <PlayerRow key={player.id} player={player} />
-          ))}
-        </section>
-      ) : null}
-    </div>
+      {everyone.length === 0 ? (
+        <EmptyState>
+          {canEdit ? "No players yet. Add the first one above." : "No players yet."}
+        </EmptyState>
+      ) : (
+        <div className="space-y-8">
+          <section className="space-y-2">
+            <h2 className="text-xs font-semibold text-ink-dim uppercase">
+              {active.length} active
+            </h2>
+            {active.length === 0 ? (
+              <EmptyState>Everyone is retired.</EmptyState>
+            ) : (
+              active.map((player) => (
+                <PlayerRow key={player.id} player={player} canEdit={canEdit} />
+              ))
+            )}
+          </section>
+
+          {retired.length > 0 ? (
+            <section className="space-y-2">
+              <h2 className="text-xs font-semibold text-ink-dim uppercase">
+                {retired.length} retired
+              </h2>
+              {retired.map((player) => (
+                <PlayerRow key={player.id} player={player} canEdit={canEdit} />
+              ))}
+            </section>
+          ) : null}
+        </div>
+      )}
+    </>
   );
 }
 
-function PlayerRow({ player }: { player: Player }) {
+function PlayerRow({ player, canEdit }: { player: Player; canEdit: boolean }) {
+  const shell = `rounded-lg border border-line bg-panel ${
+    player.archived ? "opacity-60" : ""
+  }`;
+  const row = "flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3";
+
+  const summary = (
+    <>
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10 text-sm font-semibold text-gold">
+        {player.power}
+      </span>
+
+      <span className="mr-auto font-medium">{player.name}</span>
+
+      <span className="flex flex-wrap gap-1">
+        {ROLES.map((role) => (
+          <ComfortBadge key={role} role={role} comfort={comfortOf(player, role)} />
+        ))}
+      </span>
+    </>
+  );
+
+  if (!canEdit) {
+    return (
+      <div className={shell}>
+        <div className={row}>{summary}</div>
+      </div>
+    );
+  }
+
   const updateThisPlayer = updatePlayer.bind(null, player.id);
 
   return (
-    <details
-      className={`group rounded-lg border border-line bg-panel ${
-        player.archived ? "opacity-60" : ""
-      }`}
-    >
-      <summary className="flex list-none flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 select-none">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10 text-sm font-semibold text-gold">
-          {player.power}
-        </span>
-
-        <span className="mr-auto font-medium">{player.name}</span>
-
-        <span className="flex flex-wrap gap-1">
-          {ROLES.map((role) => (
-            <ComfortBadge key={role} role={role} comfort={comfortOf(player, role)} />
-          ))}
-        </span>
-
+    <details className={`group ${shell}`}>
+      <summary className={`${row} list-none select-none`}>
+        {summary}
         <span className="text-xs text-ink-dim group-open:hidden">Edit</span>
       </summary>
 

@@ -5,13 +5,20 @@ import { usePathname } from "next/navigation";
 
 import { SplurreToggle } from "./splurre-toggle";
 
+import type { ReactNode } from "react";
+
 const LINKS = [
   { href: "/players", label: "Players" },
   { href: "/new-game", label: "New game" },
   { href: "/history", label: "History" },
 ] as const;
 
-export function SiteNav() {
+/**
+ * `sessionSlot` is rendered on the server and passed in, because this
+ * component is a client one (it needs usePathname) and reading the session
+ * cookie has to happen server-side.
+ */
+export function SiteNav({ sessionSlot }: { sessionSlot: ReactNode }) {
   const pathname = usePathname();
 
   return (
@@ -43,6 +50,8 @@ export function SiteNav() {
               );
             })}
           </nav>
+
+          {sessionSlot}
 
           <SplurreToggle />
         </div>

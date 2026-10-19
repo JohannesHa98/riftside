@@ -45,6 +45,25 @@ That changes how data loading works:
 | `npm test` | Vitest (run once) |
 | `npm run db:generate` | Generate a SQL migration from schema changes |
 | `npm run db:migrate` | Apply migrations |
+| `npm run auth:hash` | Hash a password for `ADMIN_PASSWORD_HASH` |
+
+## Auth
+
+One account: whoever knows the password behind `ADMIN_PASSWORD_HASH`. **Reading
+is public** — anyone can browse the roster, run the balancer and read history.
+**Every write requires a session.**
+
+- `lib/password.ts` — scrypt hashing, no Next.js imports so
+  `scripts/hash-password.mjs` can load it directly and the two cannot drift.
+  The hash uses `.` as its separator, **not `$`**: Next.js runs `.env` values
+  through dotenv-expand, which eats `$`.
+- `lib/auth.ts` — signs a JWT into an HttpOnly, SameSite=Lax cookie.
+  `isSignedIn()` never throws; `requireSignedIn()` throws.
+- **Every mutating server action calls one of those guards.** Server actions are
+  reachable by direct POST, so hiding a button protects nothing. Adding a new
+  action means adding a guard — `lib/auth.test.ts` covers forged, expired and
+  `alg: none` tokens, but it cannot catch an unguarded action.
+- Rotating `AUTH_SECRET` invalidates every existing session.
 
 ## Environment
 
@@ -53,6 +72,10 @@ variables. **Only two are used:**
 
 - `DATABASE_URL` — pooled, used by the app at runtime
 - `DATABASE_URL_UNPOOLED` — direct, used by drizzle-kit for migrations
+- `AUTH_SECRET` — signs the session cookie, 32+ random characters
+- `ADMIN_PASSWORD_HASH` — from `npm run auth:hash`
+
+`.env.example` lists all four. See `## Auth` below.
 
 Ignore every other `POSTGRES_*`, `PG*` and `NEON_AUTH_*` variable. Neon Auth is
 not set up and should not be.

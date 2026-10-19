@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { EmptyState, PageHeader } from "@/components/ui";
 import { listActivePlayers } from "@/db/queries";
+import { isSignedIn } from "@/lib/auth";
 import { PLAYERS_PER_GAME } from "@/lib/balance";
 import { toBalancePlayer } from "@/lib/player";
 
@@ -23,7 +24,11 @@ export default function NewGamePage() {
 }
 
 async function Picker() {
-  const roster = (await listActivePlayers()).map(toBalancePlayer);
+  const [players, canEdit] = await Promise.all([
+    listActivePlayers(),
+    isSignedIn(),
+  ]);
+  const roster = players.map(toBalancePlayer);
 
   if (roster.length < PLAYERS_PER_GAME) {
     return (
@@ -34,7 +39,7 @@ async function Picker() {
     );
   }
 
-  return <TeamPicker roster={roster} />;
+  return <TeamPicker roster={roster} canEdit={canEdit} />;
 }
 
 function RosterSkeleton() {
