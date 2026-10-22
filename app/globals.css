@@ -29,17 +29,23 @@
 }
 
 /*
- * Reserve the scrollbar's space whether or not there is one to show.
+ * Keep the scrollbar's space occupied whether or not the page scrolls.
  *
  * Without this, a page that grows past one screen gains a scrollbar, the
  * viewport loses its width, and everything centred shifts sideways — so
  * moving between a short page and a long one makes the whole layout jump.
  *
+ * `overflow-y: scroll` rather than `scrollbar-gutter: stable`: the gutter
+ * leaves an empty strip beside the full-width header on short pages, which
+ * reads as the header being cut off. A real track there reads as a
+ * scrollbar. Colouring it keeps it from looking like default grey chrome.
+ *
  * Browsers with overlay scrollbars reserve nothing, so this costs them
  * nothing either.
  */
 html {
-  scrollbar-gutter: stable;
+  overflow-y: scroll;
+  scrollbar-color: var(--color-line) var(--color-panel);
 }
 
 /*
