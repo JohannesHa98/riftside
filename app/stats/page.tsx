@@ -103,6 +103,9 @@ function withRanks(stats: PlayerStats[]): Array<{
   }));
 }
 
+/** How many champions each player's row shows. */
+const MOST_PLAYED_SHOWN = 5;
+
 function Row({
   player,
   rank,
@@ -174,7 +177,7 @@ function Row({
           <span className="text-ink-dim">—</span>
         ) : (
           <span className="flex items-center gap-1.5">
-            {player.champions.slice(0, 3).map((champion) => {
+            {player.champions.slice(0, MOST_PLAYED_SHOWN).map((champion) => {
               const icon = championIconUrl(champion.championId);
               const name = championLabel(champions, champion.championId);
 
