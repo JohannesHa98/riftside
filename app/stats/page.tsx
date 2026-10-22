@@ -4,7 +4,9 @@ import { Suspense } from "react";
 
 import { EmptyState, PageHeader } from "@/components/ui";
 import {
+  MIN_RANKED_GAMES,
   countMatchesWithoutWinner,
+  isRanked,
   kdaRatio,
   playerStats,
   winRate,
@@ -17,7 +19,7 @@ export default function StatsPage() {
     <div>
       <PageHeader
         title="Stats"
-        description="Ranked by win rate — a tie goes to whoever held it over more games. Only games with a recorded result count."
+        description={`Ranked by win rate, after ${MIN_RANKED_GAMES} games with a recorded result. A tie goes to whoever held the rate over more games.`}
       />
 
       <Suspense fallback={<StatsSkeleton />}>
@@ -54,11 +56,11 @@ async function Table() {
           </thead>
 
           <tbody className="divide-y divide-line">
-            {stats.map((player, index) => (
+            {withRanks(stats).map(({ player, rank }) => (
               <Row
                 key={player.playerId}
                 player={player}
-                rank={index + 1}
+                rank={rank}
                 champions={champions}
               />
             ))}
@@ -81,13 +83,26 @@ async function Table() {
   );
 }
 
+/** Positions count the ranked players only, so the ladder reads 1, 2, 3. */
+function withRanks(stats: PlayerStats[]): Array<{
+  player: PlayerStats;
+  rank: number | null;
+}> {
+  let position = 0;
+
+  return stats.map((player) => ({
+    player,
+    rank: isRanked(player) ? ++position : null,
+  }));
+}
+
 function Row({
   player,
   rank,
   champions,
 }: {
   player: PlayerStats;
-  rank: number;
+  rank: number | null;
   champions: Map<number, string>;
 }) {
   const rate = winRate(player);
@@ -95,8 +110,15 @@ function Row({
 
   return (
     <tr className={player.archived ? "opacity-60" : undefined}>
-      <td className="py-2 pr-1 pl-4 text-right text-ink-dim tabular-nums">
-        {rate === null ? "—" : rank}
+      <td
+        className="py-2 pr-1 pl-4 text-right text-ink-dim tabular-nums"
+        title={
+          rank === null
+            ? `Unranked until ${MIN_RANKED_GAMES} games with a result`
+            : undefined
+        }
+      >
+        {rank ?? "—"}
       </td>
 
       <td className="px-2 py-2">

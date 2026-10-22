@@ -244,19 +244,24 @@ export async function playerStats(): Promise<PlayerStats[]> {
       .sort((a, b) => b.games - a.games || a.championId - b.championId);
   }
 
-  // A ladder: best win rate first. Anyone with no decided games has no rate
-  // to rank on and goes last rather than being treated as 0%.
+  // A ladder: ranked players by win rate, then everyone still short of the
+  // minimum, closest to qualifying first.
   return [...byPlayer.values()].sort((a, b) => {
-    const rateA = winRate(a);
-    const rateB = winRate(b);
+    const rankedA = isRanked(a);
+    const rankedB = isRanked(b);
 
-    if (rateA === null || rateB === null) {
-      if (rateA === rateB) return a.name.localeCompare(b.name);
-      return rateA === null ? 1 : -1;
+    if (rankedA !== rankedB) return rankedA ? -1 : 1;
+
+    if (!rankedA) {
+      return b.decided - a.decided || a.name.localeCompare(b.name);
     }
 
     // Same rate: the one who held it over more games ranks above.
-    return rateB - rateA || b.decided - a.decided || a.name.localeCompare(b.name);
+    return (
+      (winRate(b) ?? 0) - (winRate(a) ?? 0) ||
+      b.decided - a.decided ||
+      a.name.localeCompare(b.name)
+    );
   });
 }
 
@@ -268,6 +273,16 @@ export function kdaRatio(stats: PlayerStats): number | null {
 
 export function winRate(stats: PlayerStats): number | null {
   return stats.decided === 0 ? null : stats.wins / stats.decided;
+}
+
+/**
+ * Games needed before a win rate means anything. One lucky game should not
+ * top the ladder.
+ */
+export const MIN_RANKED_GAMES = 5;
+
+export function isRanked(stats: PlayerStats): boolean {
+  return stats.decided >= MIN_RANKED_GAMES;
 }
 
 /** Games saved without a result, which no win rate can count. */
