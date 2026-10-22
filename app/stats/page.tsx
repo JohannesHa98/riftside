@@ -13,7 +13,8 @@ import {
   type PlayerStats,
 } from "@/db/queries";
 import { championIconUrl, championLabel, championNames } from "@/lib/champions";
-import { dpmProfileUrl } from "@/lib/riot-id";
+
+import { PlayerName } from "./player-name";
 
 import { OddsAndEnds } from "./odds-and-ends";
 
@@ -118,7 +119,6 @@ function Row({
 }) {
   const rate = winRate(player);
   const kda = kdaRatio(player);
-  const profile = dpmProfileUrl(player.riotId);
 
   return (
     <tr className={player.archived ? "opacity-60" : undefined}>
@@ -134,19 +134,11 @@ function Row({
       </td>
 
       <td className="px-2 py-2">
-        {profile === null ? (
-          <span className="font-medium">{player.name}</span>
-        ) : (
-          <a
-            href={profile}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={`${player.name} on dpm.lol`}
-            className="font-medium underline decoration-ink-dim/40 underline-offset-2 transition-colors hover:text-gold hover:decoration-gold"
-          >
-            {player.name}
-          </a>
-        )}
+        <PlayerName
+          name={player.name}
+          riotId={player.riotId}
+          className="font-medium"
+        />
         <span
           title="Power level, used by the balancer"
           className="ml-1.5 text-xs text-gold tabular-nums"

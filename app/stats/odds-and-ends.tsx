@@ -9,6 +9,8 @@ import {
 } from "@/db/queries";
 import { championIconUrl, championLabel, championNames } from "@/lib/champions";
 
+import { PlayerName } from "./player-name";
+
 /** The bits below the ladder: nothing load-bearing, all of it fun. */
 export async function OddsAndEnds() {
   const [fun, champions] = await Promise.all([funStats(), championNames()]);
@@ -130,7 +132,11 @@ function Leaders({
     <ol className="space-y-1.5">
       {players.map((player) => (
         <li key={player.name} className="flex items-baseline gap-2 text-sm">
-          <span className="mr-auto truncate">{player.name}</span>
+          <PlayerName
+            name={player.name}
+            riotId={player.riotId}
+            className="mr-auto truncate"
+          />
           <span className="font-medium tabular-nums">
             {player.value.toFixed(1)}
           </span>
@@ -219,7 +225,7 @@ function Record({
       ) : (
         <>
           <span className="mr-auto truncate">
-            {record.name}
+            <PlayerName name={record.name} riotId={record.riotId} />
             <span className="ml-1 text-xs text-ink-dim">
               {championLabel(champions, record.championId)}
             </span>
