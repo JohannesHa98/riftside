@@ -27,6 +27,7 @@ export function TeamPicker({
   const [page, setPage] = useState(0);
   const [chosen, setChosen] = useState<number | null>(null);
   const teamsRef = useRef<HTMLDivElement>(null);
+  const suggestionsRef = useRef<HTMLElement>(null);
 
   // The teams appear below the whole player list, so opening a suggestion
   // can leave them off-screen entirely. Bring them into view.
@@ -34,9 +35,7 @@ export function TeamPicker({
     if (chosen === null) return;
 
     teamsRef.current?.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
       block: "start",
     });
   }, [chosen]);
@@ -47,6 +46,19 @@ export function TeamPicker({
   );
 
   const ready = selected.length === PLAYERS_PER_GAME;
+
+  // On a phone the player list fills several screens, so the suggestions
+  // appear far below the tenth tick and it looks as though nothing happened.
+  // On a wider screen they are already in view, so leave the page alone.
+  useEffect(() => {
+    if (!ready) return;
+    if (!window.matchMedia("(max-width: 639px)").matches) return;
+
+    suggestionsRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "start",
+    });
+  }, [ready]);
 
   // Pure and tiny (126 splits), so it runs here rather than on the server.
   const ranked = useMemo(
@@ -154,7 +166,7 @@ export function TeamPicker({
       </section>
 
       {ready ? (
-        <section>
+        <section ref={suggestionsRef} className="scroll-mt-4">
           <div className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="text-xs font-semibold text-ink-dim uppercase">
               Suggestions
@@ -212,6 +224,10 @@ export function TeamPicker({
       ) : null}
     </div>
   );
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function SuggestionRow({

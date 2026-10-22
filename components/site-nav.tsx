@@ -29,7 +29,15 @@ export function SiteNav({ sessionSlot }: { sessionSlot: ReactNode }) {
   return (
     <header className="border-b border-line bg-panel/80 backdrop-blur">
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
-        <div className="flex items-center justify-between gap-3 py-3">
+        <div className="flex items-center gap-3 py-3">
+          {/*
+            On a phone this spacer and the burger's wrapper both take an equal
+            share of the leftover width, which is what centres the title
+            between them. Both vanish from sm up, where the title sits left
+            and the nav is pushed right instead.
+          */}
+          <div className="flex-1 sm:hidden" aria-hidden />
+
           <Link
             href="/"
             // The logo navigates too, so it closes the menu like any link.
@@ -40,7 +48,7 @@ export function SiteNav({ sessionSlot }: { sessionSlot: ReactNode }) {
           </Link>
 
           {/* Everything on one row from small screens up. */}
-          <div className="hidden items-center gap-2 sm:flex">
+          <div className="hidden items-center gap-2 sm:ml-auto sm:flex">
             {/*
               p-1.5 is not decoration: this scrolls sideways on narrow screens,
               and setting overflow-x forces overflow-y to clip too, so a focus
@@ -69,16 +77,18 @@ export function SiteNav({ sessionSlot }: { sessionSlot: ReactNode }) {
           </div>
 
           {/* On a phone the links fold behind this, beside the logo. */}
-          <button
-            type="button"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-expanded={menuOpen}
-            aria-controls="site-menu"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            className="-mr-1 rounded-md p-2 text-ink-dim transition-colors hover:bg-raised/60 hover:text-ink sm:hidden"
-          >
-            {menuOpen ? <CloseIcon /> : <BurgerIcon />}
-          </button>
+          <div className="flex flex-1 justify-end sm:hidden">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-expanded={menuOpen}
+              aria-controls="site-menu"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              className="-mr-1 rounded-md p-2 text-ink-dim transition-colors hover:bg-raised/60 hover:text-ink"
+            >
+              {menuOpen ? <CloseIcon /> : <BurgerIcon />}
+            </button>
+          </div>
         </div>
 
         <div id="site-menu" hidden={!menuOpen} className="pb-3 sm:hidden">
@@ -91,7 +101,7 @@ export function SiteNav({ sessionSlot }: { sessionSlot: ReactNode }) {
                 // tapping the page you are already on still closes the menu.
                 onClick={() => setMenuOpen(false)}
                 aria-current={isCurrent(link.href) ? "page" : undefined}
-                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-md px-3 py-2 text-right text-sm font-medium transition-colors ${
                   isCurrent(link.href)
                     ? "bg-raised text-ink"
                     : "text-ink-dim hover:bg-raised/60 hover:text-ink"
@@ -102,7 +112,7 @@ export function SiteNav({ sessionSlot }: { sessionSlot: ReactNode }) {
             ))}
           </nav>
 
-          <div className="mt-2 flex items-center gap-2 border-t border-line pt-2">
+          <div className="mt-2 flex items-center justify-center gap-2 border-t border-line pt-2">
             {sessionSlot}
             <SplurreToggle />
           </div>
