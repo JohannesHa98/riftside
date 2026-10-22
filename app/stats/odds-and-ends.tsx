@@ -2,12 +2,10 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 
 import {
-  MIN_RANKED_GAMES,
   funStats,
   type ChampionTally,
   type PlayerAverage,
   type SingleGameRecord,
-  type WinStreak,
 } from "@/db/queries";
 import { championIconUrl, championLabel, championNames } from "@/lib/champions";
 
@@ -37,26 +35,6 @@ export async function OddsAndEnds() {
           <Champions tally={fun.mostPlayed} champions={champions} noun="game" />
         </Card>
 
-        <Card title="Kills the most" note={PER_GAME_NOTE}>
-          <Leaders players={fun.leaders.kills} unit="kills" />
-        </Card>
-
-        <Card title="Dies the most" note={PER_GAME_NOTE}>
-          <Leaders players={fun.leaders.deaths} unit="deaths" />
-        </Card>
-
-        <Card title="Assists the most" note={PER_GAME_NOTE}>
-          <Leaders players={fun.leaders.assists} unit="assists" />
-        </Card>
-
-        <Card title="Best farmer" note={`CS per minute, ${MIN_GAMES_NOTE}`}>
-          <Leaders players={fun.leaders.csPerMinute} unit="cs/min" />
-        </Card>
-
-        <Card title="Longest win streak" note="games in a row">
-          <Streaks streaks={fun.winStreaks} />
-        </Card>
-
         <Card title="Single-game records">
           <ul className="space-y-1.5">
             <Record label="Kills" record={fun.records.kills} champions={champions} />
@@ -69,6 +47,22 @@ export async function OddsAndEnds() {
             />
             <Record label="CS" record={fun.records.cs} champions={champions} />
           </ul>
+        </Card>
+
+        <Card title="Kills the most" note="per game">
+          <Leaders players={fun.leaders.kills} unit="kills" />
+        </Card>
+
+        <Card title="Dies the most" note="per game">
+          <Leaders players={fun.leaders.deaths} unit="deaths" />
+        </Card>
+
+        <Card title="Assists the most" note="per game">
+          <Leaders players={fun.leaders.assists} unit="assists" />
+        </Card>
+
+        <Card title="Best farmer" note="CS per minute">
+          <Leaders players={fun.leaders.csPerMinute} unit="cs/min" />
         </Card>
 
         <Card title="Which side wins">
@@ -118,9 +112,6 @@ export async function OddsAndEnds() {
   );
 }
 
-const MIN_GAMES_NOTE = `minimum ${MIN_RANKED_GAMES} games`;
-const PER_GAME_NOTE = `per game, ${MIN_GAMES_NOTE}`;
-
 function Leaders({
   players,
   unit,
@@ -139,22 +130,6 @@ function Leaders({
             {player.value.toFixed(1)}
           </span>
           <span className="w-12 shrink-0 text-xs text-ink-dim">{unit}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function Streaks({ streaks }: { streaks: WinStreak[] }) {
-  if (streaks.length === 0) return <Empty />;
-
-  return (
-    <ol className="space-y-1.5">
-      {streaks.map((entry) => (
-        <li key={entry.name} className="flex items-baseline gap-2 text-sm">
-          <span className="mr-auto truncate">{entry.name}</span>
-          <span className="font-medium tabular-nums text-good">{entry.streak}</span>
-          <span className="w-12 shrink-0 text-xs text-ink-dim">wins</span>
         </li>
       ))}
     </ol>

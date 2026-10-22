@@ -301,11 +301,6 @@ export interface PlayerAverage {
   games: number;
 }
 
-export interface WinStreak {
-  name: string;
-  streak: number;
-}
-
 export interface SingleGameRecord {
   name: string;
   value: number;
@@ -323,7 +318,6 @@ export interface FunStats {
     assists: PlayerAverage[];
     csPerMinute: PlayerAverage[];
   };
-  winStreaks: WinStreak[];
   records: {
     kills: SingleGameRecord | null;
     deaths: SingleGameRecord | null;
@@ -394,7 +388,6 @@ export async function funStats(): Promise<FunStats> {
       assists: perGameLeaders(rows, (row) => row.assists),
       csPerMinute: csPerMinuteLeaders(rows),
     },
-    winStreaks: longestWinStreaks(rows),
     records: {
       kills: bestBy(rows, (row) => row.kills),
       deaths: bestBy(rows, (row) => row.deaths),
@@ -489,37 +482,6 @@ function csPerMinuteLeaders(rows: StatRow[]): PlayerAverage[] {
       games: entry.games,
     }))
     .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))
-    .slice(0, LEADERBOARD_SIZE);
-}
-
-/** Longest run of wins in a row, counting games in the order they happened. */
-function longestWinStreaks(rows: StatRow[]): WinStreak[] {
-  const byPlayer = new Map<string, StatRow[]>();
-
-  for (const row of rows) {
-    if (row.winner === null) continue;
-    byPlayer.set(row.name, [...(byPlayer.get(row.name) ?? []), row]);
-  }
-
-  const streaks: WinStreak[] = [];
-
-  for (const [name, games] of byPlayer) {
-    const inOrder = [...games].sort(
-      (a, b) => a.playedAt.getTime() - b.playedAt.getTime() || a.matchId - b.matchId,
-    );
-
-    let best = 0;
-    let running = 0;
-    for (const game of inOrder) {
-      running = game.winner === game.team ? running + 1 : 0;
-      best = Math.max(best, running);
-    }
-
-    if (best > 1) streaks.push({ name, streak: best });
-  }
-
-  return streaks
-    .sort((a, b) => b.streak - a.streak || a.name.localeCompare(b.name))
     .slice(0, LEADERBOARD_SIZE);
 }
 

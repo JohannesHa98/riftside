@@ -133,6 +133,12 @@ function Row({
 
       <td className="px-2 py-2">
         <span className="font-medium">{player.name}</span>
+        <span
+          title="Power level, used by the balancer"
+          className="ml-1.5 text-xs text-gold tabular-nums"
+        >
+          {player.power}
+        </span>
         {player.archived ? (
           <span className="ml-1 text-xs text-ink-dim">retired</span>
         ) : null}
