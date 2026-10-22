@@ -153,9 +153,32 @@ export const matchPlayers = pgTable(
   ],
 );
 
+/**
+ * Champions banned in a game. Kept as rows rather than a column so they can
+ * be counted and joined; pick_turn preserves the order they went in.
+ */
+export const matchBans = pgTable(
+  "match_bans",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    matchId: integer("match_id")
+      .notNull()
+      .references(() => matches.id, { onDelete: "cascade" }),
+    team: teamEnum().notNull(),
+    /** Riot uses -1 for a turn where nobody banned. */
+    championId: integer("champion_id").notNull(),
+    pickTurn: integer("pick_turn").notNull(),
+  },
+  (table) => [
+    uniqueIndex("match_bans_match_turn_unique").on(table.matchId, table.pickTurn),
+  ],
+);
+
 export type Player = typeof players.$inferSelect;
 export type NewPlayer = typeof players.$inferInsert;
 export type Match = typeof matches.$inferSelect;
 export type NewMatch = typeof matches.$inferInsert;
 export type MatchPlayer = typeof matchPlayers.$inferSelect;
 export type NewMatchPlayer = typeof matchPlayers.$inferInsert;
+export type MatchBan = typeof matchBans.$inferSelect;
+export type NewMatchBan = typeof matchBans.$inferInsert;

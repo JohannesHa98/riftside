@@ -3,7 +3,7 @@ import { asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { ROLES, type Role, type Team } from "@/lib/types";
 
 import { db } from "./index";
-import { matchPlayers, matches, players } from "./schema";
+import { matchBans, matchPlayers, matches, players } from "./schema";
 
 /** Everyone, active players first, strongest first within each group. */
 export async function listPlayers() {
@@ -293,4 +293,153 @@ export async function countMatchesWithoutWinner(): Promise<number> {
     .where(isNull(matches.winner));
 
   return row?.total ?? 0;
+}
+
+export interface PlayerAverage {
+  name: string;
+  value: number;
+  games: number;
+}
+
+export interface SingleGameRecord {
+  name: string;
+  value: number;
+  championId: number | null;
+  matchId: number;
+}
+
+export interface FunStats {
+  mostBanned: ChampionTally[];
+  mostPlayed: ChampionTally[];
+  /** Highest average deaths per game, among players with enough games. */
+  deathsPerGame: PlayerAverage[];
+  records: {
+    kills: SingleGameRecord | null;
+    deaths: SingleGameRecord | null;
+    damage: SingleGameRecord | null;
+    cs: SingleGameRecord | null;
+  };
+  sides: { blue: number; red: number };
+  longestGameSeconds: number | null;
+  shortestGameSeconds: number | null;
+}
+
+/**
+ * The odds and ends below the ladder. One pass over the tracked games,
+ * computed in memory like the rest: the whole table is a few hundred rows.
+ */
+export async function funStats(): Promise<FunStats> {
+  const [bans, rows, played] = await Promise.all([
+    db.select({ championId: matchBans.championId }).from(matchBans),
+    db
+      .select({
+        matchId: matchPlayers.matchId,
+        name: players.name,
+        championId: matchPlayers.championId,
+        kills: matchPlayers.kills,
+        deaths: matchPlayers.deaths,
+        damage: matchPlayers.damage,
+        cs: matchPlayers.cs,
+      })
+      .from(matchPlayers)
+      .innerJoin(players, eq(players.id, matchPlayers.playerId)),
+    db
+      .select({
+        winner: matches.winner,
+        durationSeconds: matches.durationSeconds,
+      })
+      .from(matches),
+  ]);
+
+  // Riot records -1 for a turn where nobody banned.
+  const banCounts = tally(
+    bans.map((ban) => ban.championId).filter((id) => id > 0),
+  );
+  const playCounts = tally(
+    rows
+      .map((row) => row.championId)
+      .filter((id): id is number => id !== null && id > 0),
+  );
+
+  const deathsByPlayer = new Map<string, { deaths: number; games: number }>();
+  for (const row of rows) {
+    if (row.deaths === null) continue;
+    const entry = deathsByPlayer.get(row.name) ?? { deaths: 0, games: 0 };
+    entry.deaths += row.deaths;
+    entry.games += 1;
+    deathsByPlayer.set(row.name, entry);
+  }
+
+  const deathsPerGame = [...deathsByPlayer]
+    .filter(([, entry]) => entry.games >= MIN_RANKED_GAMES)
+    .map(([name, entry]) => ({
+      name,
+      value: entry.deaths / entry.games,
+      games: entry.games,
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 3);
+
+  const durations = played
+    .map((match) => match.durationSeconds)
+    .filter((seconds): seconds is number => seconds !== null && seconds > 0);
+
+  return {
+    mostBanned: banCounts.slice(0, 5),
+    mostPlayed: playCounts.slice(0, 5),
+    deathsPerGame,
+    records: {
+      kills: bestBy(rows, (row) => row.kills),
+      deaths: bestBy(rows, (row) => row.deaths),
+      damage: bestBy(rows, (row) => row.damage),
+      cs: bestBy(rows, (row) => row.cs),
+    },
+    sides: {
+      blue: played.filter((match) => match.winner === "blue").length,
+      red: played.filter((match) => match.winner === "red").length,
+    },
+    longestGameSeconds: durations.length === 0 ? null : Math.max(...durations),
+    shortestGameSeconds: durations.length === 0 ? null : Math.min(...durations),
+  };
+}
+
+function tally(ids: number[]): ChampionTally[] {
+  const counts = new Map<number, number>();
+  for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+
+  return [...counts]
+    .map(([championId, games]) => ({ championId, games }))
+    .sort((a, b) => b.games - a.games || a.championId - b.championId);
+}
+
+interface StatRow {
+  matchId: number;
+  name: string;
+  championId: number | null;
+  kills: number | null;
+  deaths: number | null;
+  damage: number | null;
+  cs: number | null;
+}
+
+function bestBy(
+  rows: StatRow[],
+  pick: (row: StatRow) => number | null,
+): SingleGameRecord | null {
+  let best: SingleGameRecord | null = null;
+
+  for (const row of rows) {
+    const value = pick(row);
+    if (value === null) continue;
+    if (best !== null && value <= best.value) continue;
+
+    best = {
+      name: row.name,
+      value,
+      championId: row.championId,
+      matchId: row.matchId,
+    };
+  }
+
+  return best;
 }

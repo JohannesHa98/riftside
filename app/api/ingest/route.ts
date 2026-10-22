@@ -3,7 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { and, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { db, matchPlayers, matches, players } from "@/db";
+import { db, matchBans, matchPlayers, matches, players } from "@/db";
 import {
   SUGGESTION_WINDOW_HOURS,
   findSuggestionMatch,
@@ -49,7 +49,15 @@ export async function POST(request: Request): Promise<Response> {
     .limit(1);
 
   if (duplicate !== undefined) {
-    return json({ status: "duplicate", matchId: duplicate.id }, 200);
+    // Bans were added after some games had already been sent. Filling them
+    // in on a repeat send is free and saves deleting and re-sending a game
+    // just to pick up data we did not used to store.
+    const addedBans = await storeBansIfMissing(duplicate.id, game);
+
+    return json(
+      { status: "duplicate", matchId: duplicate.id, bansAdded: addedBans },
+      200,
+    );
   }
 
   const roster = await db
@@ -88,6 +96,7 @@ export async function POST(request: Request): Promise<Response> {
     return json({ status: "duplicate", matchId: existing?.id ?? null }, 200);
   }
 
+  await storeBansIfMissing(matchId, game);
   await backfillPuuids(linked);
 
   revalidatePath("/history");
@@ -103,6 +112,37 @@ export async function POST(request: Request): Promise<Response> {
     },
     201,
   );
+}
+
+/**
+ * Writes the bans, unless this match already has some. Separate from the
+ * match write so a repeat send can fill in what an older companion did not
+ * know to send.
+ */
+async function storeBansIfMissing(
+  matchId: number,
+  game: IngestGame,
+): Promise<number> {
+  if (game.bans.length === 0) return 0;
+
+  const [existing] = await db
+    .select({ id: matchBans.id })
+    .from(matchBans)
+    .where(eq(matchBans.matchId, matchId))
+    .limit(1);
+
+  if (existing !== undefined) return 0;
+
+  await db.insert(matchBans).values(
+    game.bans.map((ban) => ({
+      matchId,
+      team: ban.side,
+      championId: ban.championId,
+      pickTurn: ban.pickTurn,
+    })),
+  );
+
+  return game.bans.length;
 }
 
 /** Postgres unique-violation on matches.riot_game_id. */

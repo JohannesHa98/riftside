@@ -42,6 +42,13 @@ export interface ParticipantPayload {
   clientRole: string | null;
 }
 
+export interface BanPayload {
+  side: Side;
+  /** Riot uses -1 for a turn where nobody banned. */
+  championId: number;
+  pickTurn: number;
+}
+
 export interface GamePayload {
   gameId: number;
   /** ISO 8601, when the game started. */
@@ -52,6 +59,7 @@ export interface GamePayload {
   queueId: number | null;
   gameVersion: string | null;
   participants: ParticipantPayload[];
+  bans: BanPayload[];
 }
 
 export interface HistoryGame {
@@ -147,7 +155,35 @@ export function parseGame(raw: unknown): GamePayload {
     gameVersion:
       typeof game.gameVersion === "string" ? game.gameVersion : null,
     participants: parseParticipants(game, gameId),
+    bans: parseBans(game.teams),
   };
+}
+
+/** Bans hang off each team, with pickTurn giving the order across both. */
+function parseBans(teams: unknown): BanPayload[] {
+  if (!Array.isArray(teams)) return [];
+
+  const bans: BanPayload[] = [];
+
+  for (const entry of teams) {
+    const team = asRecord(entry);
+    if (team === null) continue;
+
+    const side = SIDE_BY_TEAM_ID[Number(team.teamId)];
+    if (side === undefined || !Array.isArray(team.bans)) continue;
+
+    for (const banEntry of team.bans) {
+      const ban = asRecord(banEntry);
+      if (ban === null) continue;
+
+      const pickTurn = Number(ban.pickTurn);
+      if (!Number.isFinite(pickTurn)) continue;
+
+      bans.push({ side, championId: count(ban.championId), pickTurn });
+    }
+  }
+
+  return bans.sort((a, b) => a.pickTurn - b.pickTurn);
 }
 
 function parsePlayedAt(game: Record<string, unknown>, gameId: number): string {

@@ -14,6 +14,8 @@ import {
 } from "@/db/queries";
 import { championIconUrl, championLabel, championNames } from "@/lib/champions";
 
+import { OddsAndEnds } from "./odds-and-ends";
+
 export default function StatsPage() {
   return (
     <div>
@@ -24,6 +26,11 @@ export default function StatsPage() {
 
       <Suspense fallback={<StatsSkeleton />}>
         <Table />
+      </Suspense>
+
+      {/* Its own boundary, so the ladder is not held up by the extras. */}
+      <Suspense fallback={null}>
+        <OddsAndEnds />
       </Suspense>
     </div>
   );

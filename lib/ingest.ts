@@ -39,6 +39,16 @@ export interface IngestParticipant {
   clientRole: string | null;
 }
 
+export interface IngestBan {
+  side: Team;
+  /** Riot uses -1 for a turn where nobody banned. */
+  championId: number;
+  pickTurn: number;
+}
+
+/** Ten in a normal draft; a cap in case a payload is nonsense. */
+const MAX_BANS = 20;
+
 export interface IngestGame {
   gameId: number;
   playedAt: Date;
@@ -47,6 +57,7 @@ export interface IngestGame {
   queueId: number | null;
   gameVersion: string | null;
   participants: IngestParticipant[];
+  bans: IngestBan[];
 }
 
 export type IngestParse =
@@ -110,8 +121,40 @@ export function parseIngestPayload(body: unknown): IngestParse {
       queueId: typeof game.queueId === "number" ? game.queueId : null,
       gameVersion: typeof game.gameVersion === "string" ? game.gameVersion : null,
       participants,
+      bans: parseBans(game.bans),
     },
   };
+}
+
+/**
+ * Bans are optional: a game sent by an older companion simply has none, which
+ * is not a reason to reject it.
+ */
+function parseBans(value: unknown): IngestBan[] {
+  if (!Array.isArray(value)) return [];
+
+  const bans: IngestBan[] = [];
+  const turnsSeen = new Set<number>();
+
+  for (const entry of value.slice(0, MAX_BANS)) {
+    const raw = asRecord(entry);
+    if (raw === null) continue;
+
+    if (!(TEAMS as readonly unknown[]).includes(raw.side)) continue;
+
+    const pickTurn = Number(raw.pickTurn);
+    if (!Number.isInteger(pickTurn) || turnsSeen.has(pickTurn)) continue;
+    turnsSeen.add(pickTurn);
+
+    const championId = Number(raw.championId);
+    bans.push({
+      side: raw.side as Team,
+      championId: Number.isInteger(championId) ? championId : -1,
+      pickTurn,
+    });
+  }
+
+  return bans.sort((a, b) => a.pickTurn - b.pickTurn);
 }
 
 type ParticipantParse =
