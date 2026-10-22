@@ -12,6 +12,7 @@ import { ROLES } from "@/lib/types";
 import { createPlayer, updatePlayer } from "./actions";
 import { DeletePlayerButton } from "./delete-player-button";
 import { PlayerForm } from "./player-form";
+import { RosterSearch, type RosterEntry } from "./roster-search";
 
 export default function PlayersPage() {
   return (
@@ -31,8 +32,15 @@ export default function PlayersPage() {
 async function Roster() {
   const [everyone, canEdit] = await Promise.all([listPlayers(), isSignedIn()]);
 
-  const active = everyone.filter((player) => !player.archived);
-  const retired = everyone.filter((player) => player.archived);
+  // The rows are rendered here and handed to the client component, so
+  // filtering is instant while the rows keep their server-side forms.
+  const entries: RosterEntry[] = everyone.map((player) => ({
+    id: player.id,
+    name: player.name,
+    riotId: player.riotId,
+    archived: player.archived,
+    row: <PlayerRow player={player} canEdit={canEdit} />,
+  }));
 
   return (
     <>
@@ -56,31 +64,7 @@ async function Roster() {
           {canEdit ? "No players yet. Add the first one above." : "No players yet."}
         </EmptyState>
       ) : (
-        <div className="space-y-8">
-          <section className="space-y-2">
-            <h2 className="text-xs font-semibold text-ink-dim uppercase">
-              {active.length} active
-            </h2>
-            {active.length === 0 ? (
-              <EmptyState>Everyone is retired.</EmptyState>
-            ) : (
-              active.map((player) => (
-                <PlayerRow key={player.id} player={player} canEdit={canEdit} />
-              ))
-            )}
-          </section>
-
-          {retired.length > 0 ? (
-            <section className="space-y-2">
-              <h2 className="text-xs font-semibold text-ink-dim uppercase">
-                {retired.length} retired
-              </h2>
-              {retired.map((player) => (
-                <PlayerRow key={player.id} player={player} canEdit={canEdit} />
-              ))}
-            </section>
-          ) : null}
-        </div>
+        <RosterSearch entries={entries} />
       )}
     </>
   );
