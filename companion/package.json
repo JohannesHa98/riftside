@@ -6,7 +6,8 @@
   "description": "Watches the local League client for finished in-house custom games and sends them to the website.",
   "scripts": {
     "start": "node --env-file=.env --disable-warning=ExperimentalWarning src/index.ts",
-    "probe": "node --env-file=.env --disable-warning=ExperimentalWarning src/index.ts --probe-only"
+    "probe": "node --env-file=.env --disable-warning=ExperimentalWarning src/index.ts --probe-only",
+    "backfill": "node --env-file=.env --disable-warning=ExperimentalWarning src/index.ts --backfill"
   },
   "dependencies": {
     "ws": "^8.18.0"

@@ -2,11 +2,32 @@ import { loadConfig, type Config } from "./config.ts";
 import { watchGameflow } from "./events.ts";
 import { LcuClient } from "./lcu.ts";
 import { readLockfile, type Lockfile } from "./lockfile.ts";
-import { inHouseCandidates, listHistoryGames, type HistoryGame } from "./parse.ts";
+import {
+  inHouseCandidates,
+  isInHouseGame,
+  parseGame,
+  type GamePayload,
+  type HistoryGame,
+} from "./parse.ts";
 import { outline, probeEndpoints, writeRawDump, writeRawDumps } from "./probe.ts";
+import { sendGame } from "./send.ts";
+import { SentStore } from "./sent-store.ts";
 
 const RETRY_MS = 4000;
-const PROBE_ONLY = process.argv.includes("--probe-only");
+const MATCH_HISTORY_PATH =
+  "/lol-match-history/v1/products/lol/current-summoner/matches?begIndex=0&endIndex=19";
+
+/** How long to keep looking for a finished game to appear in the history. */
+const SETTLE_ATTEMPTS = 12;
+const SETTLE_GAP_MS = 5000;
+
+type Mode = "watch" | "backfill" | "probe";
+
+const MODE: Mode = process.argv.includes("--probe-only")
+  ? "probe"
+  : process.argv.includes("--backfill")
+    ? "backfill"
+    : "watch";
 
 main().catch((error) => {
   log(`Stopped: ${error instanceof Error ? error.message : String(error)}`);
@@ -17,23 +38,44 @@ async function main(): Promise<void> {
   const config = loadConfig();
 
   log("In-house companion — read-only. It never sends anything to the client.");
+  log(`Mode: ${MODE}`);
   log(`Lockfile: ${config.lockfilePath}`);
-  if (config.websiteUrl.length === 0 || config.ingestSecret.length === 0) {
-    log("Note: WEBSITE_URL / INGEST_SECRET not set. Fine for now — nothing is sent yet.");
+
+  if (MODE !== "probe") {
+    if (config.websiteUrl.length === 0 || config.ingestSecret.length === 0) {
+      throw new Error(
+        "WEBSITE_URL and INGEST_SECRET must both be set in companion/.env.",
+      );
+    }
+    log(`Website: ${config.websiteUrl}`);
   }
+
+  const store = new SentStore(config.sentStorePath);
+  await store.load();
+  log(`Already sent: ${store.size} game(s), remembered in ${config.sentStorePath}`);
 
   for (;;) {
     const lockfile = await waitForClient(config.lockfilePath);
     log(`Client found on port ${lockfile.port} (pid ${lockfile.pid}).`);
+    const client = new LcuClient(lockfile);
 
     try {
-      await runSession(new LcuClient(lockfile), config);
-      if (PROBE_ONLY) return;
+      if (MODE === "probe") {
+        await runProbe(client, config);
+        return;
+      }
+
+      if (MODE === "backfill") {
+        await runBackfill(client, config, store);
+        return;
+      }
+
+      await runWatch(client, config, store);
     } catch (error) {
-      log(`Lost the client: ${error instanceof Error ? error.message : String(error)}`);
+      log(`Lost the client: ${describe(error)}`);
     }
 
-    if (PROBE_ONLY) return;
+    if (MODE !== "watch") return;
 
     log("Waiting for the client to come back…");
     await delay(RETRY_MS);
@@ -57,7 +99,159 @@ async function waitForClient(path: string): Promise<Lockfile> {
   }
 }
 
-async function runSession(client: LcuClient, config: Config): Promise<void> {
+async function runWatch(
+  client: LcuClient,
+  config: Config,
+  store: SentStore,
+): Promise<void> {
+  log("Watching for games to finish. Leave this running.");
+
+  await new Promise<void>((resolve) => {
+    let busy = false;
+
+    const stop = watchGameflow(client, {
+      onOpen: () => log("Subscribed to client events."),
+      onPhase: (event) => {
+        log(`Gameflow phase: ${event.phase}`);
+        if (event.phase !== "EndOfGame" || busy) return;
+
+        busy = true;
+        void collectFinishedGame(client, config, store)
+          .catch((error) => log(`  could not collect that game: ${describe(error)}`))
+          .finally(() => {
+            busy = false;
+          });
+      },
+      onClose: (reason) => {
+        stop();
+        resolve();
+        log(`Event socket closed (${reason}).`);
+      },
+    });
+  });
+}
+
+/**
+ * A game does not appear in the match history the instant it ends, so this
+ * keeps looking for a little while rather than giving up on the first miss.
+ */
+async function collectFinishedGame(
+  client: LcuClient,
+  config: Config,
+  store: SentStore,
+): Promise<void> {
+  log("A game finished. Looking for it in the match history…");
+
+  for (let attempt = 1; attempt <= SETTLE_ATTEMPTS; attempt++) {
+    const candidates = await listCandidates(client);
+    const fresh = candidates.find((game) => !store.has(game.gameId));
+
+    if (fresh !== undefined) {
+      await fetchAndSend(client, config, store, fresh);
+      return;
+    }
+
+    if (attempt === 1 && candidates.length > 0) {
+      log("  nothing new yet — the newest in-house game is already sent.");
+    }
+
+    await delay(SETTLE_GAP_MS);
+  }
+
+  log("  gave up waiting for it to appear. `npm run backfill` will catch it.");
+}
+
+async function runBackfill(
+  client: LcuClient,
+  config: Config,
+  store: SentStore,
+): Promise<void> {
+  const candidates = await listCandidates(client);
+  // Oldest first, so history fills in the order the games were played.
+  const pending = candidates.filter((game) => !store.has(game.gameId)).reverse();
+
+  log(
+    `Match history holds ${candidates.length} in-house game(s); ` +
+      `${pending.length} not sent yet.`,
+  );
+
+  for (const game of pending) {
+    await fetchAndSend(client, config, store, game);
+  }
+
+  log("Backfill finished.");
+}
+
+async function listCandidates(client: LcuClient): Promise<HistoryGame[]> {
+  const response = await client.get(MATCH_HISTORY_PATH);
+  if (response.status !== 200) {
+    throw new Error(`Match history answered ${response.status}.`);
+  }
+
+  return inHouseCandidates(response.body);
+}
+
+async function fetchAndSend(
+  client: LcuClient,
+  config: Config,
+  store: SentStore,
+  game: HistoryGame,
+): Promise<void> {
+  log(`Game ${game.gameId} (${Math.round(game.durationSeconds / 60)} min):`);
+
+  const response = await client.get(`/lol-match-history/v1/games/${game.gameId}`);
+  if (response.status !== 200) {
+    log(`  the client answered ${response.status}; leaving it for next time.`);
+    return;
+  }
+
+  // The list says custom/CLASSIC/Rift, but only the detail carries all ten
+  // players, so the ten-player rule is checked here.
+  if (!isInHouseGame(response.body)) {
+    log("  not an in-house game after all. Ignoring it from now on.");
+    await store.add(game.gameId);
+    return;
+  }
+
+  let payload: GamePayload;
+  try {
+    payload = parseGame(response.body);
+  } catch (error) {
+    // Keep the raw response: if Riot changed a field, this is the evidence.
+    const file = await writeRawDump(
+      `unparsed-${game.gameId}`,
+      response.body,
+      config.rawDumpDir,
+    );
+    log(`  could not read it: ${describe(error)}`);
+    log(`  saved the raw response to ${file}`);
+    return;
+  }
+
+  const outcome = await sendGame(config, payload, log);
+
+  switch (outcome.status) {
+    case "sent":
+      log(
+        `  sent. match ${outcome.matchId}, ${outcome.linked} linked` +
+          (outcome.unlinked > 0 ? `, ${outcome.unlinked} unlinked` : ""),
+      );
+      await store.add(game.gameId);
+      break;
+
+    case "duplicate":
+      log(`  the website already had it (match ${outcome.matchId}).`);
+      await store.add(game.gameId);
+      break;
+
+    case "refused":
+      // Deliberately not remembered, so it is tried again next time.
+      log(`  the website refused it (${outcome.code}): ${outcome.error}`);
+      break;
+  }
+}
+
+async function runProbe(client: LcuClient, config: Config): Promise<void> {
   const results = await probeEndpoints(client);
 
   log("");
@@ -80,121 +274,33 @@ async function runSession(client: LcuClient, config: Config): Promise<void> {
     log(indent(result.outline));
   }
 
-  // Match history is the one that matters most, so follow it one level deeper
-  // and pull a single game's detail — using whatever ids are actually present
-  // rather than assuming a field name.
-  await dumpOneGameDetail(client, config, results);
-
-  if (PROBE_ONLY) return;
-
-  log("");
-  log("Watching for games to finish. Leave this running.");
-
-  await new Promise<void>((resolve) => {
-    const stop = watchGameflow(client, {
-      onOpen: () => log("Subscribed to client events."),
-      onPhase: (event) => {
-        log(`Gameflow phase: ${event.phase}`);
-        void onPhase(client, config, event.phase);
-      },
-      onClose: (reason) => {
-        stop();
-        resolve();
-        log(`Event socket closed (${reason}).`);
-      },
-    });
-  });
-}
-
-async function onPhase(
-  client: LcuClient,
-  config: Config,
-  phase: string,
-): Promise<void> {
-  // Step 1 only observes. Which phase means "finished" gets decided from the
-  // real sequence we see logged here, not from memory.
-  if (phase !== "EndOfGame" && phase !== "PreEndOfGame") return;
-
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  log(`Game finished (${phase}). Dumping what the client has…`);
-
-  for (const [name, path] of [
-    ["eog-stats-block", "/lol-end-of-game/v1/eog-stats-block"],
-    [
-      "match-history",
-      "/lol-match-history/v1/products/lol/current-summoner/matches?begIndex=0&endIndex=19",
-    ],
-  ] as const) {
-    try {
-      const response = await client.get(path);
-      if (response.status !== 200) {
-        log(`  ${name}: ${response.status}`);
-        continue;
-      }
-
-      const file = await writeRawDump(`${name}-${stamp}`, response.body, config.rawDumpDir);
-      log(`  ${name}: written to ${file}`);
-      log(indent(outline(response.body), 4));
-    } catch (error) {
-      log(`  ${name}: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-}
-
-async function dumpOneGameDetail(
-  client: LcuClient,
-  config: Config,
-  results: Awaited<ReturnType<typeof probeEndpoints>>,
-): Promise<void> {
   const history = results.find(
     (result) => result.slug.startsWith("match-history") && result.status === 200,
   );
-  if (history === undefined) {
+  if (history === undefined) return;
+
+  const candidate = inHouseCandidates(history.body)[0];
+  if (candidate === undefined) {
     log("");
-    log("No match history endpoint answered, so no game detail to fetch.");
+    log("No in-house game in the recent history to dump.");
     return;
   }
 
-  const games = listHistoryGames(history.body);
-  if (games.length === 0) {
-    log("");
-    log("Match history answered but held no games, so nothing to follow.");
-    return;
-  }
+  const detail = await client.get(`/lol-match-history/v1/games/${candidate.gameId}`);
+  if (detail.status !== 200) return;
 
+  const file = await writeRawDump(
+    "game-detail-custom-sr",
+    detail.body,
+    config.rawDumpDir,
+  );
   log("");
-  log(`Match history holds ${games.length} game(s):`);
-  for (const game of games) {
-    log(
-      `  ${game.gameId}  ${game.gameType}/${game.gameMode}  map ${game.mapId}  ${game.durationSeconds}s`,
-    );
-  }
+  log(`Newest in-house game written to ${file}`);
+  log(indent(outline(detail.body)));
+}
 
-  // The newest game may be an ARAM or a practice session. The fixture worth
-  // keeping is an in-house candidate: a custom game on Summoner's Rift.
-  const wanted: Array<{ name: string; game: HistoryGame | undefined }> = [
-    { name: "game-detail-newest", game: games[0] },
-    { name: "game-detail-custom-sr", game: inHouseCandidates(history.body)[0] },
-  ];
-
-  for (const { name, game } of wanted) {
-    if (game === undefined) {
-      log("");
-      log(`No game found for ${name}.`);
-      continue;
-    }
-
-    const path = `/lol-match-history/v1/games/${game.gameId}`;
-    const response = await client.get(path);
-    log("");
-    log(`  [${response.status === 200 ? "ok  " : "fail"}] ${response.status} ${path}`);
-    if (response.status !== 200) continue;
-
-    const file = await writeRawDump(name, response.body, config.rawDumpDir);
-    log(`  written to ${file}`);
-    log(`--- ${name}`);
-    log(indent(outline(response.body)));
-  }
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function indent(text: string, spaces = 2): string {

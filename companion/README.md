@@ -16,5 +16,28 @@ npm start
 
 Leave it running. Start the League client whenever.
 
-`npm run probe` connects, dumps what the client returns to `fixtures/raw/`, and
-exits without watching for games.
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `npm start` | Watch for finished games and send them |
+| `npm run backfill` | Send every in-house game in recent history that has not been sent |
+| `npm run probe` | Dump what the client returns to `fixtures/raw/` and exit |
+
+## What counts as an in-house game
+
+A custom game, on Summoner's Rift, in CLASSIC mode, with ten players. All four
+checks are needed: a real match history also holds ARAM customs and practice
+tool runs, which are custom games too.
+
+## Sending twice
+
+`sent-games.json` remembers what has gone already. The website is also
+idempotent on Riot's game id, so deleting that file is harmless — a backfill
+just gets told the games are duplicates.
+
+## Matching players
+
+Participants are matched to players by PUUID, falling back to Riot ID. Fill in
+each player's Riot ID on the website's Players page first, or every game will
+arrive with ten unlinked participants.
