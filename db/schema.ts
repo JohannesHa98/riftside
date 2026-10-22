@@ -1,13 +1,14 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   check,
   integer,
   pgEnum,
   pgTable,
-  primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 import { COMFORTS, MAX_POWER, MIN_POWER, ROLES, TEAMS } from "@/lib/types";
@@ -15,6 +16,9 @@ import { COMFORTS, MAX_POWER, MIN_POWER, ROLES, TEAMS } from "@/lib/types";
 export const roleEnum = pgEnum("role", ROLES);
 export const comfortEnum = pgEnum("comfort", COMFORTS);
 export const teamEnum = pgEnum("team", TEAMS);
+
+/** Where a match came from: saved by hand, or picked up by the companion app. */
+export const matchSourceEnum = pgEnum("match_source", ["manual", "riot"]);
 
 export const players = pgTable(
   "players",
@@ -36,6 +40,14 @@ export const players = pgTable(
     midComfort: comfortEnum("mid_comfort").notNull().default("ok"),
     botComfort: comfortEnum("bot_comfort").notNull().default("ok"),
     supportComfort: comfortEnum("support_comfort").notNull().default("ok"),
+
+    /**
+     * Riot identity, filled in so the companion app can match a League
+     * participant to this player. PUUID is the reliable key; the Riot ID is
+     * a fallback, because people rename themselves.
+     */
+    riotId: text("riot_id").unique(),
+    puuid: text().unique(),
 
     /** Retired players stay in the table so past matches keep their rosters. */
     archived: boolean().notNull().default(false),
@@ -59,6 +71,16 @@ export const matches = pgTable("matches", {
     .defaultNow(),
   /** Null while a game is recorded but undecided. */
   winner: teamEnum(),
+
+  /**
+   * Riot's game id, once the companion app has matched this match to a real
+   * game. Unique, which is what makes ingest idempotent. bigint because the
+   * ids are already past what int4 holds.
+   */
+  riotGameId: bigint("riot_game_id", { mode: "number" }).unique(),
+  durationSeconds: integer("duration_seconds"),
+  source: matchSourceEnum().notNull().default("manual"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -67,22 +89,68 @@ export const matches = pgTable("matches", {
 export const matchPlayers = pgTable(
   "match_players",
   {
+    /**
+     * A surrogate key, because a participant the companion app could not
+     * match to anyone on the roster has no player_id to form a pair with.
+     */
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+
     matchId: integer("match_id")
       .notNull()
       .references(() => matches.id, { onDelete: "cascade" }),
-    playerId: integer("player_id")
-      .notNull()
-      .references(() => players.id, { onDelete: "restrict" }),
+
+    /** Null for a League participant who is not one of our players yet. */
+    playerId: integer("player_id").references(() => players.id, {
+      onDelete: "restrict",
+    }),
+
     team: teamEnum().notNull(),
-    /** Suggested role. Nullable: the teams may settle roles themselves. */
+
+    /** The balancer's suggestion. Never overwritten with what was played. */
     role: roleEnum(),
+
     /**
      * Power snapshot at the time of the match, so later Elo-style adjustments
-     * have real history to replay instead of today's numbers.
+     * have real history to replay instead of today's numbers. Null for an
+     * unlinked participant, who has no power to snapshot.
      */
-    powerAtTime: integer("power_at_time").notNull(),
+    powerAtTime: integer("power_at_time"),
+
+    /**
+     * Riot identity of this participant, kept even when linked so an unlinked
+     * row can be connected to a player later.
+     */
+    puuid: text(),
+    riotId: text("riot_id"),
+
+    /** Per-game stats from the League client. Null on hand-saved matches. */
+    championId: integer("champion_id"),
+    kills: integer(),
+    deaths: integer(),
+    assists: integer(),
+    cs: integer(),
+    gold: integer(),
+    damage: integer(),
+
+    /**
+     * What the client guessed someone played. Not a role: it is derived from
+     * movement and is wrong often enough in customs that it is recorded and
+     * not relied on.
+     */
+    clientLane: text("client_lane"),
+    clientRole: text("client_role"),
   },
-  (table) => [primaryKey({ columns: [table.matchId, table.playerId] })],
+  (table) => [
+    // Replaces the old composite primary key. Partial, so many unlinked
+    // participants can sit in one match while a real player still cannot be
+    // listed in the same match twice.
+    uniqueIndex("match_players_match_player_unique")
+      .on(table.matchId, table.playerId)
+      .where(sql`${table.playerId} is not null`),
+    uniqueIndex("match_players_match_puuid_unique")
+      .on(table.matchId, table.puuid)
+      .where(sql`${table.puuid} is not null`),
+  ],
 );
 
 export type Player = typeof players.$inferSelect;

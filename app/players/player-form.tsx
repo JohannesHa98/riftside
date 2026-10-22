@@ -87,6 +87,46 @@ export function PlayerForm({
         </label>
       </div>
 
+      <label className="block">
+        <span className="mb-1 block text-xs font-medium text-ink-dim uppercase">
+          Riot ID
+        </span>
+        <input
+          name="riotId"
+          type="text"
+          autoComplete="off"
+          spellCheck={false}
+          defaultValue={player?.riotId ?? ""}
+          placeholder="Name#TAG"
+          className={inputStyles}
+        />
+        <span className="mt-1 block text-xs text-ink-dim">
+          Links this player to their League account, so finished games find
+          them. Optional until then.
+        </span>
+      </label>
+
+      <details>
+        <summary className="text-xs font-medium text-ink-dim uppercase select-none">
+          PUUID
+        </summary>
+        <div className="mt-2">
+          <input
+            name="puuid"
+            type="text"
+            autoComplete="off"
+            spellCheck={false}
+            defaultValue={player?.puuid ?? ""}
+            placeholder="Filled in automatically"
+            className={`${inputStyles} font-mono text-xs`}
+          />
+          <span className="mt-1 block text-xs text-ink-dim">
+            Normally filled in by the companion app the first time it sees this
+            player. Riot IDs change; this does not.
+          </span>
+        </div>
+      </details>
+
       <fieldset>
         <legend className="mb-2 text-xs font-medium text-ink-dim uppercase">
           Role preference

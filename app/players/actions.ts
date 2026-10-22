@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db, matchPlayers, players } from "@/db";
 import { isSignedIn, requireSignedIn } from "@/lib/auth";
+import { parsePuuid, parseRiotId } from "@/lib/riot-id";
 import { COMFORTS, MAX_POWER, MIN_POWER, ROLES, type Comfort } from "@/lib/types";
 
 export type PlayerFormState = { ok: true; at: number } | { error: string } | null;
@@ -35,6 +36,8 @@ function parseComfort(value: FormDataEntryValue | null): Comfort {
 interface ParsedPlayer {
   name: string;
   power: number;
+  riotId: string | null;
+  puuid: string | null;
   topComfort: Comfort;
   jungleComfort: Comfort;
   midComfort: Comfort;
@@ -55,6 +58,12 @@ function parsePlayerForm(
     return { error: `Power has to be a whole number from ${MIN_POWER} to ${MAX_POWER}.` };
   }
 
+  const riotId = parseRiotId(formData.get("riotId"));
+  if (!riotId.ok) return { error: riotId.error };
+
+  const puuid = parsePuuid(formData.get("puuid"));
+  if (!puuid.ok) return { error: puuid.error };
+
   const [top, jungle, mid, bot, support] = ROLES.map((role) =>
     parseComfort(formData.get(role)),
   );
@@ -63,6 +72,8 @@ function parsePlayerForm(
     values: {
       name,
       power,
+      riotId: riotId.value,
+      puuid: puuid.value,
       topComfort: top,
       jungleComfort: jungle,
       midComfort: mid,

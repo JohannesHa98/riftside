@@ -23,10 +23,12 @@ export async function listActivePlayers() {
 }
 
 export interface MatchParticipant {
-  playerId: number;
+  /** Null for a League participant not yet linked to one of our players. */
+  playerId: number | null;
   name: string;
   role: Role | null;
-  powerAtTime: number;
+  /** Null for an unlinked participant, who has no power to snapshot. */
+  powerAtTime: number | null;
 }
 
 export interface MatchSummary {
@@ -95,6 +97,7 @@ export async function listMatches(limit = 50): Promise<MatchSummary[]> {
   return rows.map((match) => summaries.get(match.id)!);
 }
 
+/** Unlinked participants contribute nothing, having no power on record. */
 export function totalPower(side: MatchParticipant[]): number {
-  return side.reduce((sum, participant) => sum + participant.powerAtTime, 0);
+  return side.reduce((sum, participant) => sum + (participant.powerAtTime ?? 0), 0);
 }
