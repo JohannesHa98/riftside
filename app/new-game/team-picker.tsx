@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ComfortBadge } from "@/components/comfort-badge";
 import { TeamCard } from "@/components/team-card";
@@ -26,6 +26,20 @@ export function TeamPicker({
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [page, setPage] = useState(0);
   const [chosen, setChosen] = useState<number | null>(null);
+  const teamsRef = useRef<HTMLDivElement>(null);
+
+  // The teams appear below the whole player list, so opening a suggestion
+  // can leave them off-screen entirely. Bring them into view.
+  useEffect(() => {
+    if (chosen === null) return;
+
+    teamsRef.current?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+      block: "start",
+    });
+  }, [chosen]);
 
   const selected = useMemo(
     () => roster.filter((player) => selectedIds.includes(player.id)),
@@ -185,14 +199,16 @@ export function TeamPicker({
       ) : null}
 
       {chosenSuggestion ? (
-        <>
+        // scroll-mt leaves a little of the page above the teams, so they do
+        // not land flush against the top edge.
+        <div ref={teamsRef} className="scroll-mt-4 space-y-6">
           <section className="grid gap-3 sm:grid-cols-2">
             <TeamCard team={chosenSuggestion.blue} side="blue" />
             <TeamCard team={chosenSuggestion.red} side="red" />
           </section>
 
           {canEdit ? <SaveTeams suggestion={chosenSuggestion} /> : null}
-        </>
+        </div>
       ) : null}
     </div>
   );
