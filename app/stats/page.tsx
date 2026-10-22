@@ -54,7 +54,7 @@ async function Table() {
         <table className="w-full min-w-136 text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs text-ink-dim uppercase">
-              <th className="w-8 py-2 pr-1 pl-2 text-right font-medium">#</th>
+              <th className="w-10 px-2 py-2 text-center font-medium">#</th>
               <th className="px-2 py-2 font-medium">Player</th>
               <th className="px-2 py-2 font-medium">Games</th>
               <th className="px-2 py-2 font-medium">Win rate</th>
@@ -122,7 +122,7 @@ function Row({
   return (
     <tr className={player.archived ? "opacity-60" : undefined}>
       <td
-        className="py-2 pr-1 pl-2 text-right text-ink-dim tabular-nums"
+        className="px-2 py-2 text-center text-ink-dim tabular-nums"
         title={
           rank === null
             ? `Unranked until ${MIN_RANKED_GAMES} games with a result`
