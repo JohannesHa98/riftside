@@ -301,6 +301,11 @@ export interface PlayerAverage {
   games: number;
 }
 
+export interface WinStreak {
+  name: string;
+  streak: number;
+}
+
 export interface SingleGameRecord {
   name: string;
   value: number;
@@ -311,8 +316,14 @@ export interface SingleGameRecord {
 export interface FunStats {
   mostBanned: ChampionTally[];
   mostPlayed: ChampionTally[];
-  /** Highest average deaths per game, among players with enough games. */
-  deathsPerGame: PlayerAverage[];
+  /** Per-game leaders, among players with enough games to mean anything. */
+  leaders: {
+    kills: PlayerAverage[];
+    deaths: PlayerAverage[];
+    assists: PlayerAverage[];
+    csPerMinute: PlayerAverage[];
+  };
+  winStreaks: WinStreak[];
   records: {
     kills: SingleGameRecord | null;
     deaths: SingleGameRecord | null;
@@ -323,6 +334,9 @@ export interface FunStats {
   longestGameSeconds: number | null;
   shortestGameSeconds: number | null;
 }
+
+/** How many names each leaderboard shows. */
+const LEADERBOARD_SIZE = 5;
 
 /**
  * The odds and ends below the ladder. One pass over the tracked games,
@@ -335,14 +349,20 @@ export async function funStats(): Promise<FunStats> {
       .select({
         matchId: matchPlayers.matchId,
         name: players.name,
+        team: matchPlayers.team,
         championId: matchPlayers.championId,
         kills: matchPlayers.kills,
         deaths: matchPlayers.deaths,
+        assists: matchPlayers.assists,
         damage: matchPlayers.damage,
         cs: matchPlayers.cs,
+        playedAt: matches.playedAt,
+        winner: matches.winner,
+        durationSeconds: matches.durationSeconds,
       })
       .from(matchPlayers)
-      .innerJoin(players, eq(players.id, matchPlayers.playerId)),
+      .innerJoin(players, eq(players.id, matchPlayers.playerId))
+      .innerJoin(matches, eq(matches.id, matchPlayers.matchId)),
     db
       .select({
         winner: matches.winner,
@@ -361,33 +381,20 @@ export async function funStats(): Promise<FunStats> {
       .filter((id): id is number => id !== null && id > 0),
   );
 
-  const deathsByPlayer = new Map<string, { deaths: number; games: number }>();
-  for (const row of rows) {
-    if (row.deaths === null) continue;
-    const entry = deathsByPlayer.get(row.name) ?? { deaths: 0, games: 0 };
-    entry.deaths += row.deaths;
-    entry.games += 1;
-    deathsByPlayer.set(row.name, entry);
-  }
-
-  const deathsPerGame = [...deathsByPlayer]
-    .filter(([, entry]) => entry.games >= MIN_RANKED_GAMES)
-    .map(([name, entry]) => ({
-      name,
-      value: entry.deaths / entry.games,
-      games: entry.games,
-    }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 3);
-
   const durations = played
     .map((match) => match.durationSeconds)
     .filter((seconds): seconds is number => seconds !== null && seconds > 0);
 
   return {
-    mostBanned: banCounts.slice(0, 5),
-    mostPlayed: playCounts.slice(0, 5),
-    deathsPerGame,
+    mostBanned: banCounts.slice(0, LEADERBOARD_SIZE),
+    mostPlayed: playCounts.slice(0, LEADERBOARD_SIZE),
+    leaders: {
+      kills: perGameLeaders(rows, (row) => row.kills),
+      deaths: perGameLeaders(rows, (row) => row.deaths),
+      assists: perGameLeaders(rows, (row) => row.assists),
+      csPerMinute: csPerMinuteLeaders(rows),
+    },
+    winStreaks: longestWinStreaks(rows),
     records: {
       kills: bestBy(rows, (row) => row.kills),
       deaths: bestBy(rows, (row) => row.deaths),
@@ -415,11 +422,105 @@ function tally(ids: number[]): ChampionTally[] {
 interface StatRow {
   matchId: number;
   name: string;
+  team: Team;
   championId: number | null;
   kills: number | null;
   deaths: number | null;
+  assists: number | null;
   damage: number | null;
   cs: number | null;
+  playedAt: Date;
+  winner: Team | null;
+  durationSeconds: number | null;
+}
+
+/** Average per game, highest first, for anyone past the game minimum. */
+function perGameLeaders(
+  rows: StatRow[],
+  pick: (row: StatRow) => number | null,
+): PlayerAverage[] {
+  const totals = new Map<string, { total: number; games: number }>();
+
+  for (const row of rows) {
+    const value = pick(row);
+    if (value === null) continue;
+
+    const entry = totals.get(row.name) ?? { total: 0, games: 0 };
+    entry.total += value;
+    entry.games += 1;
+    totals.set(row.name, entry);
+  }
+
+  return [...totals]
+    .filter(([, entry]) => entry.games >= MIN_RANKED_GAMES)
+    .map(([name, entry]) => ({
+      name,
+      value: entry.total / entry.games,
+      games: entry.games,
+    }))
+    .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))
+    .slice(0, LEADERBOARD_SIZE);
+}
+
+/**
+ * Total CS over total minutes, rather than averaging each game's rate: a
+ * short game should not count as much as a long one.
+ */
+function csPerMinuteLeaders(rows: StatRow[]): PlayerAverage[] {
+  const totals = new Map<string, { cs: number; seconds: number; games: number }>();
+
+  for (const row of rows) {
+    if (row.cs === null || row.durationSeconds === null || row.durationSeconds <= 0) {
+      continue;
+    }
+
+    const entry = totals.get(row.name) ?? { cs: 0, seconds: 0, games: 0 };
+    entry.cs += row.cs;
+    entry.seconds += row.durationSeconds;
+    entry.games += 1;
+    totals.set(row.name, entry);
+  }
+
+  return [...totals]
+    .filter(([, entry]) => entry.games >= MIN_RANKED_GAMES)
+    .map(([name, entry]) => ({
+      name,
+      value: entry.cs / (entry.seconds / 60),
+      games: entry.games,
+    }))
+    .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))
+    .slice(0, LEADERBOARD_SIZE);
+}
+
+/** Longest run of wins in a row, counting games in the order they happened. */
+function longestWinStreaks(rows: StatRow[]): WinStreak[] {
+  const byPlayer = new Map<string, StatRow[]>();
+
+  for (const row of rows) {
+    if (row.winner === null) continue;
+    byPlayer.set(row.name, [...(byPlayer.get(row.name) ?? []), row]);
+  }
+
+  const streaks: WinStreak[] = [];
+
+  for (const [name, games] of byPlayer) {
+    const inOrder = [...games].sort(
+      (a, b) => a.playedAt.getTime() - b.playedAt.getTime() || a.matchId - b.matchId,
+    );
+
+    let best = 0;
+    let running = 0;
+    for (const game of inOrder) {
+      running = game.winner === game.team ? running + 1 : 0;
+      best = Math.max(best, running);
+    }
+
+    if (best > 1) streaks.push({ name, streak: best });
+  }
+
+  return streaks
+    .sort((a, b) => b.streak - a.streak || a.name.localeCompare(b.name))
+    .slice(0, LEADERBOARD_SIZE);
 }
 
 function bestBy(
