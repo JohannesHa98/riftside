@@ -17,7 +17,7 @@ export default function StatsPage() {
     <div>
       <PageHeader
         title="Stats"
-        description="Games, win rate and KDA. Champions and KDA come from games the companion app picked up."
+        description="Only games with a recorded result count. Champions and KDA come from games the companion app picked up."
       />
 
       <Suspense fallback={<StatsSkeleton />}>
@@ -63,12 +63,12 @@ async function Table() {
       {unrecorded > 0 ? (
         <p className="mt-3 text-sm text-ink-dim">
           {unrecorded} {unrecorded === 1 ? "game has" : "games have"} no winner
-          recorded, so {unrecorded === 1 ? "it is" : "they are"} counted under
-          Games but left out of Win rate.{" "}
+          recorded, so {unrecorded === 1 ? "it is" : "they are"} left out
+          entirely.{" "}
           <Link href="/history" className="text-gold underline">
             Add the results
           </Link>{" "}
-          to include {unrecorded === 1 ? "it" : "them"}.
+          to count {unrecorded === 1 ? "it" : "them"}.
         </p>
       ) : null}
     </>
@@ -94,16 +94,15 @@ function Row({
         ) : null}
       </td>
 
-      <td className="px-2 py-2 text-right tabular-nums">
-        {player.games}
-        {player.games > player.decided ? (
-          <span
-            className="ml-1 text-xs text-ink-dim"
-            title={`${player.games - player.decided} with no winner recorded`}
-          >
-            ({player.decided} counted)
-          </span>
-        ) : null}
+      <td
+        className="px-2 py-2 text-right tabular-nums"
+        title={
+          player.games > player.decided
+            ? `${player.games - player.decided} further game(s) have no winner recorded`
+            : undefined
+        }
+      >
+        {player.decided}
       </td>
 
       <td className="px-2 py-2 text-right tabular-nums">

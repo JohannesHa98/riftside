@@ -19,3 +19,18 @@ export async function setWinner(matchId: number, winner: Team | null): Promise<v
 
   revalidatePath("/history");
 }
+
+/**
+ * Delete a game and its whole roster.
+ *
+ * match_players is ON DELETE CASCADE, so the participant rows go with it.
+ * There is no undo, which is why the button asks first.
+ */
+export async function deleteMatch(matchId: number): Promise<void> {
+  await requireSignedIn();
+
+  await db.delete(matches).where(eq(matches.id, matchId));
+
+  revalidatePath("/history");
+  revalidatePath("/stats");
+}

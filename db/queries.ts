@@ -244,8 +244,9 @@ export async function playerStats(): Promise<PlayerStats[]> {
       .sort((a, b) => b.games - a.games || a.championId - b.championId);
   }
 
+  // Ordered by the games that count, since that is the column on show.
   return [...byPlayer.values()].sort(
-    (a, b) => b.games - a.games || a.name.localeCompare(b.name),
+    (a, b) => b.decided - a.decided || b.games - a.games || a.name.localeCompare(b.name),
   );
 }
 

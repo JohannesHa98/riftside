@@ -12,6 +12,7 @@ import { isSignedIn } from "@/lib/auth";
 import { championIconUrl, championLabel, championNames } from "@/lib/champions";
 import { ROLE_LABELS, type Team } from "@/lib/types";
 
+import { DeleteMatchButton } from "./delete-match-button";
 import { WinnerButtons } from "./winner-buttons";
 
 export default function HistoryPage() {
@@ -119,8 +120,16 @@ function MatchCard({
         </div>
 
         {canEdit ? (
-          <div className="mt-4 border-t border-line pt-3">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
             <WinnerButtons matchId={match.id} winner={match.winner} />
+            <DeleteMatchButton
+              matchId={match.id}
+              playedAt={match.playedAt.toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            />
           </div>
         ) : null}
       </div>
