@@ -82,7 +82,13 @@ export function TeamPicker({
           </p>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-2">
+        {/*
+          CSS columns rather than a grid: a grid fills left-right, so a
+          power-ordered roster would read 10 10 / 9 9 across the rows. Columns
+          flow top-to-bottom, so the left column runs straight down the
+          ranking and the right column carries on from the bottom of it.
+        */}
+        <div className="columns-1 gap-2 sm:columns-2">
           {roster.map((player) => {
             const isSelected = selectedIds.includes(player.id);
             const full = !isSelected && selected.length >= PLAYERS_PER_GAME;
@@ -90,7 +96,7 @@ export function TeamPicker({
             return (
               <label
                 key={player.id}
-                className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+                className={`mb-2 flex break-inside-avoid items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
                   isSelected
                     ? "border-gold/50 bg-gold/5"
                     : "border-line bg-panel hover:border-ink-dim/50"

@@ -17,7 +17,7 @@ export default function StatsPage() {
     <div>
       <PageHeader
         title="Stats"
-        description="Only games with a recorded result count. Champions and KDA come from games the companion app picked up."
+        description="Ranked by win rate — a tie goes to whoever held it over more games. Only games with a recorded result count."
       />
 
       <Suspense fallback={<StatsSkeleton />}>
@@ -44,7 +44,8 @@ async function Table() {
         <table className="w-full min-w-[34rem] text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs text-ink-dim uppercase">
-              <th className="px-4 py-2 font-medium">Player</th>
+              <th className="w-10 py-2 pr-1 pl-4 text-right font-medium">#</th>
+              <th className="px-2 py-2 font-medium">Player</th>
               <th className="px-2 py-2 text-right font-medium">Games</th>
               <th className="px-2 py-2 text-right font-medium">Win rate</th>
               <th className="px-2 py-2 text-right font-medium">KDA</th>
@@ -53,8 +54,13 @@ async function Table() {
           </thead>
 
           <tbody className="divide-y divide-line">
-            {stats.map((player) => (
-              <Row key={player.playerId} player={player} champions={champions} />
+            {stats.map((player, index) => (
+              <Row
+                key={player.playerId}
+                player={player}
+                rank={index + 1}
+                champions={champions}
+              />
             ))}
           </tbody>
         </table>
@@ -77,9 +83,11 @@ async function Table() {
 
 function Row({
   player,
+  rank,
   champions,
 }: {
   player: PlayerStats;
+  rank: number;
   champions: Map<number, string>;
 }) {
   const rate = winRate(player);
@@ -87,7 +95,11 @@ function Row({
 
   return (
     <tr className={player.archived ? "opacity-60" : undefined}>
-      <td className="px-4 py-2">
+      <td className="py-2 pr-1 pl-4 text-right text-ink-dim tabular-nums">
+        {rate === null ? "—" : rank}
+      </td>
+
+      <td className="px-2 py-2">
         <span className="font-medium">{player.name}</span>
         {player.archived ? (
           <span className="ml-1 text-xs text-ink-dim">retired</span>

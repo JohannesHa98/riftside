@@ -5,21 +5,21 @@ import { ROLES, type Role, type Team } from "@/lib/types";
 import { db } from "./index";
 import { matchPlayers, matches, players } from "./schema";
 
-/** Everyone, active players first, alphabetical within each group. */
+/** Everyone, active players first, strongest first within each group. */
 export async function listPlayers() {
   return db
     .select()
     .from(players)
-    .orderBy(asc(players.archived), asc(players.name));
+    .orderBy(asc(players.archived), desc(players.power), asc(players.name));
 }
 
-/** Players available to pick for a game. */
+/** Players available to pick for a game, strongest first. */
 export async function listActivePlayers() {
   return db
     .select()
     .from(players)
     .where(eq(players.archived, false))
-    .orderBy(asc(players.name));
+    .orderBy(desc(players.power), asc(players.name));
 }
 
 export interface MatchParticipant {
@@ -244,10 +244,20 @@ export async function playerStats(): Promise<PlayerStats[]> {
       .sort((a, b) => b.games - a.games || a.championId - b.championId);
   }
 
-  // Ordered by the games that count, since that is the column on show.
-  return [...byPlayer.values()].sort(
-    (a, b) => b.decided - a.decided || b.games - a.games || a.name.localeCompare(b.name),
-  );
+  // A ladder: best win rate first. Anyone with no decided games has no rate
+  // to rank on and goes last rather than being treated as 0%.
+  return [...byPlayer.values()].sort((a, b) => {
+    const rateA = winRate(a);
+    const rateB = winRate(b);
+
+    if (rateA === null || rateB === null) {
+      if (rateA === rateB) return a.name.localeCompare(b.name);
+      return rateA === null ? 1 : -1;
+    }
+
+    // Same rate: the one who held it over more games ranks above.
+    return rateB - rateA || b.decided - a.decided || a.name.localeCompare(b.name);
+  });
 }
 
 /** Kills plus assists per death, counting a death-free game as no deaths. */
