@@ -8,7 +8,7 @@ const COMFORT_FIELDS = {
   top: "topComfort",
   jungle: "jungleComfort",
   mid: "midComfort",
-  adc: "adcComfort",
+  bot: "botComfort",
   support: "supportComfort",
 } as const satisfies Record<Role, keyof Player>;
 

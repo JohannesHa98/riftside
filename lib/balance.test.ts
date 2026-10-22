@@ -99,21 +99,21 @@ describe("role fit", () => {
     }
   });
 
-  it("splits three adc players rather than piling them onto one team", () => {
-    const adcMains = [1, 2, 3].map((id) => makeMain(id, 5, "adc"));
+  it("splits three bot players rather than piling them onto one team", () => {
+    const botMains = [1, 2, 3].map((id) => makeMain(id, 5, "bot"));
     const flex = [4, 5, 6, 7, 8, 9, 10].map((id) => makePlayer(id, 5));
-    const adcIds = new Set(adcMains.map((p) => p.id));
+    const botIds = new Set(botMains.map((p) => p.id));
 
-    const suggestions = balanceTeams([...adcMains, ...flex], { limit: 10 });
+    const suggestions = balanceTeams([...botMains, ...flex], { limit: 10 });
 
     expect(suggestions.length).toBeGreaterThan(0);
 
     for (const suggestion of suggestions) {
       for (const team of [suggestion.blue, suggestion.red]) {
-        const mainsHere = playerIds(team).filter((id) => adcIds.has(id));
+        const mainsHere = playerIds(team).filter((id) => botIds.has(id));
         expect(mainsHere.length).toBeLessThan(3);
       }
-      // Two adc mains on one team means exactly one of them gives up adc.
+      // Two bot mains on one team means exactly one of them gives up bot.
       expect(suggestion.badCount).toBe(1);
     }
   });
@@ -123,7 +123,7 @@ describe("role fit", () => {
       makePlayer(1, 5, { top: "good" }),
       makePlayer(2, 5, { jungle: "good" }),
       makePlayer(3, 5, { mid: "good" }),
-      makePlayer(4, 5, { adc: "good" }),
+      makePlayer(4, 5, { bot: "good" }),
       makePlayer(5, 5, { support: "good" }),
       ...[6, 7, 8, 9, 10].map((id) => makePlayer(id, 5)),
     ];

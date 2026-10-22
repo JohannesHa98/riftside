@@ -38,7 +38,7 @@ interface ParsedPlayer {
   topComfort: Comfort;
   jungleComfort: Comfort;
   midComfort: Comfort;
-  adcComfort: Comfort;
+  botComfort: Comfort;
   supportComfort: Comfort;
   archived: boolean;
 }
@@ -55,7 +55,7 @@ function parsePlayerForm(
     return { error: `Power has to be a whole number from ${MIN_POWER} to ${MAX_POWER}.` };
   }
 
-  const [top, jungle, mid, adc, support] = ROLES.map((role) =>
+  const [top, jungle, mid, bot, support] = ROLES.map((role) =>
     parseComfort(formData.get(role)),
   );
 
@@ -66,7 +66,7 @@ function parsePlayerForm(
       topComfort: top,
       jungleComfort: jungle,
       midComfort: mid,
-      adcComfort: adc,
+      botComfort: bot,
       supportComfort: support,
       archived: formData.get("archived") === "on",
     },

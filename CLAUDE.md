@@ -8,7 +8,7 @@ players who are playing tonight, and the app splits them into two even teams and
 suggests a role for each player. Suggested roles are a starting point only — the
 teams settle roles among themselves.
 
-There is **no login**. It is a small trusted group, so every page is open.
+Reading is open to anyone. **Editing needs a login** — see `## Auth`.
 
 ## Stack
 
@@ -88,7 +88,7 @@ not set up and should not be.
 ## Data model
 
 **Player** — name, one universal `power` level (1–10, how good they are
-overall), and a comfort level per role (`top`, `jungle`, `mid`, `adc`,
+overall), and a comfort level per role (`top`, `jungle`, `mid`, `bot`,
 `support`) of `good` | `ok` | `bad`.
 
 Those three are the stored values and the names used throughout the code. The
@@ -134,7 +134,7 @@ Then choose the split:
 3. Among those, prefer the most players on `good` roles. Final tiebreaker is the
    smallest power difference.
 
-A consequence worth keeping: a team cannot end up with three adc players,
+A consequence worth keeping: a team cannot end up with three bot players,
 because they cannot all get good roles.
 
 The UI shows the **top 3 suggestions** so one can be chosen, or rerolled.
@@ -206,8 +206,8 @@ JavaScript expression returning the few values in question — over screenshots,
 which are the most expensive thing to put in context. Screenshot only when the
 question really is "does this look right", and then once, not per state.
 
-The exception worth keeping: the database is live and the app has no login, so
-a bad write is the one thing that is awkward to undo. Exercise a new
+The exception worth keeping: the database is live, so a bad write is the one
+thing that is awkward to undo. Exercise a new
 database-write path once, end to end, before trusting it.
 
 ## Note on AGENTS.md

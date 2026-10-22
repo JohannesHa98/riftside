@@ -47,7 +47,7 @@ export interface RoleAssignment {
 }
 
 export interface BalancedTeam {
-  /** One per role, ordered top, jungle, mid, adc, support. */
+  /** One per role, ordered top, jungle, mid, bot, support. */
   assignments: RoleAssignment[];
   totalPower: number;
   goodCount: number;

@@ -34,7 +34,7 @@ export const players = pgTable(
     topComfort: comfortEnum("top_comfort").notNull().default("ok"),
     jungleComfort: comfortEnum("jungle_comfort").notNull().default("ok"),
     midComfort: comfortEnum("mid_comfort").notNull().default("ok"),
-    adcComfort: comfortEnum("adc_comfort").notNull().default("ok"),
+    botComfort: comfortEnum("bot_comfort").notNull().default("ok"),
     supportComfort: comfortEnum("support_comfort").notNull().default("ok"),
 
     /** Retired players stay in the table so past matches keep their rosters. */

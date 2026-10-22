@@ -5,7 +5,7 @@
  * these types and must stay a pure module.
  */
 
-export const ROLES = ["top", "jungle", "mid", "adc", "support"] as const;
+export const ROLES = ["top", "jungle", "mid", "bot", "support"] as const;
 export type Role = (typeof ROLES)[number];
 
 /** How happy a player is to be put on a given role. */
@@ -22,7 +22,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   top: "Top",
   jungle: "Jungle",
   mid: "Mid",
-  adc: "ADC",
+  bot: "Bot",
   support: "Support",
 };
 
