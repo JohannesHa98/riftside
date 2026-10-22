@@ -56,10 +56,10 @@ async function Table() {
             <tr className="border-b border-line text-left text-xs text-ink-dim uppercase">
               <th className="w-10 px-2 py-2 text-center font-medium">#</th>
               <th className="px-2 py-2 font-medium">Player</th>
-              <th className="px-2 py-2 font-medium">Games</th>
-              <th className="px-2 py-2 font-medium">Win rate</th>
-              <th className="px-2 py-2 font-medium">KDA</th>
-              <th className="px-4 py-2 font-medium">Most played</th>
+              <th className="px-2 py-2 text-center font-medium">Games</th>
+              <th className="px-2 py-2 text-center font-medium">Win rate</th>
+              <th className="px-2 py-2 text-center font-medium">KDA</th>
+              <th className="px-4 py-2 text-center font-medium">Most played</th>
             </tr>
           </thead>
 
@@ -150,7 +150,7 @@ function Row({
       </td>
 
       <td
-        className="px-2 py-2 tabular-nums"
+        className="px-2 py-2 text-center tabular-nums"
         title={
           player.games > player.decided
             ? `${player.games - player.decided} further game(s) have no winner recorded`
@@ -160,7 +160,7 @@ function Row({
         {player.decided}
       </td>
 
-      <td className="px-2 py-2 tabular-nums">
+      <td className="px-2 py-2 text-center tabular-nums">
         {rate === null ? (
           <span className="text-ink-dim">—</span>
         ) : (
@@ -173,7 +173,7 @@ function Row({
         )}
       </td>
 
-      <td className="px-2 py-2 tabular-nums">
+      <td className="px-2 py-2 text-center tabular-nums">
         {kda === null ? (
           <span className="text-ink-dim">—</span>
         ) : (
@@ -183,11 +183,11 @@ function Row({
         )}
       </td>
 
-      <td className="px-4 py-2">
+      <td className="px-4 py-2 text-center">
         {player.champions.length === 0 ? (
           <span className="text-ink-dim">—</span>
         ) : (
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center justify-center gap-1.5">
             {player.champions.slice(0, MOST_PLAYED_SHOWN).map((champion) => {
               const icon = championIconUrl(champion.championId);
               const name = championLabel(champions, champion.championId);
