@@ -7,9 +7,8 @@ import {
   type PlayerAverage,
   type SingleGameRecord,
 } from "@/db/queries";
+import { PlayerName } from "@/components/player-name";
 import { championIconUrl, championLabel, championNames } from "@/lib/champions";
-
-import { PlayerName } from "./player-name";
 
 /** The bits below the ladder: nothing load-bearing, all of it fun. */
 export async function OddsAndEnds() {

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { ComfortBadge } from "@/components/comfort-badge";
+import { PlayerName } from "@/components/player-name";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { listPlayers } from "@/db/queries";
 import type { Player } from "@/db/schema";
@@ -97,7 +98,20 @@ function PlayerRow({ player, canEdit }: { player: Player; canEdit: boolean }) {
         {player.power}
       </span>
 
-      <span className="mr-auto font-medium">{player.name}</span>
+      {/*
+        Signed in, the whole row is the toggle that opens the editor, so a
+        link in the middle of it would fight the click. Signed out there is
+        nothing to open, so the name becomes the profile link.
+      */}
+      {canEdit ? (
+        <span className="mr-auto font-medium">{player.name}</span>
+      ) : (
+        <PlayerName
+          name={player.name}
+          riotId={player.riotId}
+          className="mr-auto font-medium"
+        />
+      )}
 
       <span className="flex flex-wrap gap-1">
         {ROLES.map((role) => (

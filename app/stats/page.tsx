@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { PlayerName } from "@/components/player-name";
 import { EmptyState, PageHeader } from "@/components/ui";
 import {
   MIN_RANKED_GAMES,
@@ -13,8 +14,6 @@ import {
   type PlayerStats,
 } from "@/db/queries";
 import { championIconUrl, championLabel, championNames } from "@/lib/champions";
-
-import { PlayerName } from "./player-name";
 
 import { OddsAndEnds } from "./odds-and-ends";
 
