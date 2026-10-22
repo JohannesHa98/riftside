@@ -32,9 +32,14 @@ tool runs, which are custom games too.
 
 ## Sending twice
 
-`sent-games.json` remembers what has gone already. The website is also
-idempotent on Riot's game id, so deleting that file is harmless — a backfill
-just gets told the games are duplicates.
+Nothing is remembered locally. A backfill offers every in-house game in recent
+history and the website answers "created" or "duplicate" — it is the only
+thing that knows what it has.
+
+That means deleting a game on the website and running a backfill brings it
+back, which a local list would have silently prevented. `riot_game_id` is
+UNIQUE in the database, so even two companions sending the same game at the
+same instant cannot produce two rows.
 
 ## Matching players
 

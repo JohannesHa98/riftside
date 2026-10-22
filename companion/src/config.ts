@@ -5,7 +5,6 @@ export interface Config {
   ingestSecret: string;
   lockfilePath: string;
   rawDumpDir: string;
-  sentStorePath: string;
 }
 
 /**
@@ -18,6 +17,5 @@ export function loadConfig(): Config {
     ingestSecret: process.env.INGEST_SECRET ?? "",
     lockfilePath: process.env.LOCKFILE_PATH ?? DEFAULT_LOCKFILE_PATH,
     rawDumpDir: process.env.RAW_DUMP_DIR ?? "fixtures/raw",
-    sentStorePath: process.env.SENT_STORE_PATH ?? "sent-games.json",
   };
 }

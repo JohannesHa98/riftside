@@ -4,4 +4,3 @@ node_modules/
 # Raw dumps from a real client: they contain real summoner names and PUUIDs.
 # Curated, redacted fixtures live in fixtures/ and are committed.
 fixtures/raw/
-sent-games.json

@@ -227,9 +227,14 @@ in-game, and nothing should ever make it do so.
   four matter: a real history also holds ARAM customs (mode `KIWI`, map 12)
   and practice tool runs, which are custom games too. The ten-player check
   needs the game *detail* — the history list only carries the current summoner.
+- **The website is the only record of what has been sent.** The companion
+  keeps no local list: one would disagree with reality the moment a game is
+  deleted on the site, and re-sending is free because ingest is idempotent.
+  Watch mode tracks the newest game id in memory only, so it looks forward
+  without persisting anything.
 - Tests run from the repo root, against committed fixtures that are real
   responses with identities swapped for fakes (`scripts/make-fixture.mjs`).
-  `fixtures/raw/`, `.env` and `sent-games.json` stay out of git.
+  `fixtures/raw/` and `.env` stay out of git.
 
 ### Ingest
 
@@ -240,7 +245,12 @@ the body like any untrusted input, and the route can only write a game.
 
 Participants match on PUUID first, Riot ID second, never two to the same
 player; a Riot ID match backfills the PUUID so the name-based guess is needed
-only once. Ingest is idempotent on `riot_game_id`.
+only once.
+
+Ingest is idempotent on `riot_game_id`, which is UNIQUE in the database. The
+route checks for an existing game first, but that check races: two companions
+can both pass it. The unique constraint is the actual guarantee, and the
+violation is caught and reported as a duplicate rather than a failure.
 
 A suggestion saved on the New game page is already a match row, so a game with
 those same ten players within six hours **fills that row in** rather than

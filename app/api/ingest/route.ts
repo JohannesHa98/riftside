@@ -66,10 +66,27 @@ export async function POST(request: Request): Promise<Response> {
 
   const suggestion = await findSuggestion(game, linked);
 
-  const matchId =
-    suggestion === null
-      ? await createMatch(game, linked, powerById)
-      : await fillInSuggestion(suggestion.id, game, linked);
+  let matchId: number;
+  try {
+    matchId =
+      suggestion === null
+        ? await createMatch(game, linked, powerById)
+        : await fillInSuggestion(suggestion.id, game, linked);
+  } catch (error) {
+    // Two companions can send the same game at the same moment and both get
+    // past the check above. riot_game_id is UNIQUE, so the database refuses
+    // the second write — which is the real guarantee that one game can only
+    // ever be one row. Report it as the duplicate it is, not a failure.
+    if (!isDuplicateGame(error)) throw error;
+
+    const [existing] = await db
+      .select({ id: matches.id })
+      .from(matches)
+      .where(eq(matches.riotGameId, game.gameId))
+      .limit(1);
+
+    return json({ status: "duplicate", matchId: existing?.id ?? null }, 200);
+  }
 
   await backfillPuuids(linked);
 
@@ -85,6 +102,16 @@ export async function POST(request: Request): Promise<Response> {
       unlinked: linked.filter((entry) => entry.playerId === null).length,
     },
     201,
+  );
+}
+
+/** Postgres unique-violation on matches.riot_game_id. */
+function isDuplicateGame(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "23505"
   );
 }
 
