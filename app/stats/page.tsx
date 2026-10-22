@@ -105,7 +105,7 @@ function withRanks(stats: PlayerStats[]): Array<{
 }
 
 /** How many champions each player's row shows. */
-const MOST_PLAYED_SHOWN = 5;
+const MOST_PLAYED_SHOWN = 3;
 
 function Row({
   player,
