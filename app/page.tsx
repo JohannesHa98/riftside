@@ -37,12 +37,17 @@ export default function HomePage() {
         yourselves.
       </p>
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/*
+        auto-rows-fr makes every row as tall as its tallest card, so a card
+        with a longer description does not stand taller than the rest — which
+        is most obvious on a phone, where each card is its own row.
+      */}
+      <div className="mt-8 grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {SECTIONS.map((section) => (
           <Link
             key={section.href}
             href={section.href}
-            className="rounded-lg transition-transform hover:-translate-y-0.5"
+            className="h-full rounded-lg transition-transform hover:-translate-y-0.5"
           >
             <Card className="h-full hover:border-gold/50">
               <h2 className="font-semibold">{section.title}</h2>
