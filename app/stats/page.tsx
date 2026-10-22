@@ -50,7 +50,7 @@ async function Table() {
 
   return (
     <>
-      <div className="overflow-x-auto rounded-lg border border-line bg-panel">
+      <div className="scroll-x rounded-lg border border-line bg-panel">
         <table className="w-full min-w-136 text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs text-ink-dim uppercase">

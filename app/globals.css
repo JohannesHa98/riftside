@@ -120,3 +120,41 @@ body {
   position: relative;
   z-index: 1;
 }
+
+/*
+ * The horizontal scrollbar under a table that sits in a rounded panel.
+ *
+ * Without this the bar runs the full width, so its square ends land in the
+ * panel's rounded corners and read as spilling out of the box.
+ *
+ * The scrollbar-color reset is load-bearing, not tidying: it is an inherited
+ * property, <html> sets it for the page scrollbar, and Chrome ignores every
+ * ::-webkit-scrollbar rule on any element whose scrollbar-color is not auto.
+ * Without this line the rules below do nothing at all.
+ */
+.scroll-x {
+  overflow-x: auto;
+  scrollbar-color: auto;
+}
+
+.scroll-x::-webkit-scrollbar {
+  height: 12px;
+}
+
+.scroll-x::-webkit-scrollbar-track {
+  background: transparent;
+  /* Holds both ends clear of the panel's corners. */
+  margin-inline: 0.75rem;
+}
+
+.scroll-x::-webkit-scrollbar-thumb {
+  background-color: var(--color-line);
+  border-radius: 999px;
+  /* A transparent border read as padding, so the thumb is not flush. */
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+.scroll-x::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-ink-dim);
+}
