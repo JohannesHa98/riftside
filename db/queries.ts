@@ -321,6 +321,7 @@ export interface FunStats {
   records: {
     kills: SingleGameRecord | null;
     deaths: SingleGameRecord | null;
+    assists: SingleGameRecord | null;
     damage: SingleGameRecord | null;
     cs: SingleGameRecord | null;
   };
@@ -391,6 +392,7 @@ export async function funStats(): Promise<FunStats> {
     records: {
       kills: bestBy(rows, (row) => row.kills),
       deaths: bestBy(rows, (row) => row.deaths),
+      assists: bestBy(rows, (row) => row.assists),
       damage: bestBy(rows, (row) => row.damage),
       cs: bestBy(rows, (row) => row.cs),
     },

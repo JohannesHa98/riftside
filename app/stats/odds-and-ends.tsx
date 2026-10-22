@@ -40,6 +40,11 @@ export async function OddsAndEnds() {
             <Record label="Kills" record={fun.records.kills} champions={champions} />
             <Record label="Deaths" record={fun.records.deaths} champions={champions} />
             <Record
+              label="Assists"
+              record={fun.records.assists}
+              champions={champions}
+            />
+            <Record
               label="Damage"
               record={fun.records.damage}
               champions={champions}
