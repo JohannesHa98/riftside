@@ -1,0 +1,19 @@
+{
+  "name": "lol-inhouse-companion",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Watches the local League client for finished in-house custom games and sends them to the website.",
+  "scripts": {
+    "start": "node --env-file=.env --disable-warning=ExperimentalWarning src/index.ts",
+    "probe": "node --env-file=.env --disable-warning=ExperimentalWarning src/index.ts --probe-only"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5"
+  }
+}
