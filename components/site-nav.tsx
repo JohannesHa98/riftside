@@ -30,7 +30,12 @@ export function SiteNav({ sessionSlot }: { sessionSlot: ReactNode }) {
     <header className="border-b border-line bg-panel/80 backdrop-blur">
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
         <div className="flex items-center justify-between gap-3 py-3">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
+          <Link
+            href="/"
+            // The logo navigates too, so it closes the menu like any link.
+            onClick={() => setMenuOpen(false)}
+            className="text-lg font-semibold tracking-tight"
+          >
             <span className="text-gold">In-house</span> League
           </Link>
 

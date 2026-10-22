@@ -97,7 +97,15 @@ function PlayerRow({ player, canEdit }: { player: Player; canEdit: boolean }) {
         />
       )}
 
-      <span className="flex flex-wrap gap-1">
+      {/*
+        basis-full drops the roles onto their own line on a phone, always,
+        rather than letting them trail after the name and wrap only when the
+        name happens to be long — which made the rows line up differently
+        from one player to the next. order-last keeps the Edit hint up on the
+        name's line. Both are max-sm, so they simply do not exist above a
+        phone, where there is room for a single row.
+      */}
+      <span className="flex flex-wrap gap-1 max-sm:order-last max-sm:basis-full">
         {ROLES.map((role) => (
           <ComfortBadge key={role} role={role} comfort={comfortOf(player, role)} />
         ))}

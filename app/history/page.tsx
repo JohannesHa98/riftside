@@ -66,7 +66,7 @@ function MatchCard({
   champions: Map<number, string>;
 }) {
   return (
-    <details className="rounded-lg border border-line bg-panel">
+    <details className="group rounded-lg border border-line bg-panel">
       <summary className="flex list-none flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 select-none">
         <time
           dateTime={match.playedAt.toISOString()}
@@ -100,7 +100,7 @@ function MatchCard({
           </span>
         ) : null}
 
-        <span className="ml-auto text-xs text-ink-dim">Line-ups</span>
+        <ChevronIcon />
       </summary>
 
       <div className="border-t border-line p-4">
@@ -134,6 +134,19 @@ function MatchCard({
         ) : null}
       </div>
     </details>
+  );
+}
+
+/** Points down when closed, up when open. */
+function ChevronIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="ml-auto size-4 shrink-0 fill-none stroke-current stroke-2 text-ink-dim transition-transform group-open:rotate-180"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+    </svg>
   );
 }
 
