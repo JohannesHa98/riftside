@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { ROLES, type Role, type Team } from "@/lib/types";
 
@@ -257,4 +257,14 @@ export function kdaRatio(stats: PlayerStats): number | null {
 
 export function winRate(stats: PlayerStats): number | null {
   return stats.decided === 0 ? null : stats.wins / stats.decided;
+}
+
+/** Games saved without a result, which no win rate can count. */
+export async function countMatchesWithoutWinner(): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(matches)
+    .where(isNull(matches.winner));
+
+  return row?.total ?? 0;
 }
