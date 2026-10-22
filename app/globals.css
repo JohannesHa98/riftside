@@ -29,6 +29,20 @@
 }
 
 /*
+ * Reserve the scrollbar's space whether or not there is one to show.
+ *
+ * Without this, a page that grows past one screen gains a scrollbar, the
+ * viewport loses its width, and everything centred shifts sideways — so
+ * moving between a short page and a long one makes the whole layout jump.
+ *
+ * Browsers with overlay scrollbars reserve nothing, so this costs them
+ * nothing either.
+ */
+html {
+  scrollbar-gutter: stable;
+}
+
+/*
  * Light palette. Only the tokens change, so every utility built on them
  * follows, alpha variants (bg-gold/10 and friends) included. The accent and
  * status colours are darkened here: the dark-mode values are tuned for
