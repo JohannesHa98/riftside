@@ -10,6 +10,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["**/*.test.ts"],
-    exclude: ["node_modules/**", ".next/**"],
+    // The companion is a separate package but its parsing tests run here, so
+    // one `npm test` covers the whole repo.
+    exclude: ["**/node_modules/**", ".next/**"],
   },
 });

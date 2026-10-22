@@ -2,6 +2,7 @@ import { loadConfig, type Config } from "./config.ts";
 import { watchGameflow } from "./events.ts";
 import { LcuClient } from "./lcu.ts";
 import { readLockfile, type Lockfile } from "./lockfile.ts";
+import { inHouseCandidates, listHistoryGames, type HistoryGame } from "./parse.ts";
 import { outline, probeEndpoints, writeRawDump, writeRawDumps } from "./probe.ts";
 
 const RETRY_MS = 4000;
@@ -154,7 +155,7 @@ async function dumpOneGameDetail(
     return;
   }
 
-  const games = historyGames(history.body);
+  const games = listHistoryGames(history.body);
   if (games.length === 0) {
     log("");
     log("Match history answered but held no games, so nothing to follow.");
@@ -165,7 +166,7 @@ async function dumpOneGameDetail(
   log(`Match history holds ${games.length} game(s):`);
   for (const game of games) {
     log(
-      `  ${game.gameId}  ${game.gameType}/${game.gameMode}  map ${game.mapId}  ${game.gameDuration}s`,
+      `  ${game.gameId}  ${game.gameType}/${game.gameMode}  map ${game.mapId}  ${game.durationSeconds}s`,
     );
   }
 
@@ -173,15 +174,7 @@ async function dumpOneGameDetail(
   // keeping is an in-house candidate: a custom game on Summoner's Rift.
   const wanted: Array<{ name: string; game: HistoryGame | undefined }> = [
     { name: "game-detail-newest", game: games[0] },
-    {
-      name: "game-detail-custom-sr",
-      game: games.find(
-        (game) =>
-          game.gameType === "CUSTOM_GAME" &&
-          game.gameMode === "CLASSIC" &&
-          game.mapId === SUMMONERS_RIFT,
-      ),
-    },
+    { name: "game-detail-custom-sr", game: inHouseCandidates(history.body)[0] },
   ];
 
   for (const { name, game } of wanted) {
@@ -202,40 +195,6 @@ async function dumpOneGameDetail(
     log(`--- ${name}`);
     log(indent(outline(response.body)));
   }
-}
-
-/** Map id 11 is Summoner's Rift — confirmed against a real client, not memory. */
-const SUMMONERS_RIFT = 11;
-
-interface HistoryGame {
-  gameId: number;
-  gameType: string;
-  gameMode: string;
-  mapId: number;
-  gameDuration: number;
-}
-
-/**
- * Pulls the games array out of the match-history response. The list form
- * carries only the current summoner as a participant, so every game still has
- * to be fetched by id to see all ten.
- */
-export function historyGames(body: unknown): HistoryGame[] {
-  const games = (body as { games?: { games?: unknown } } | null)?.games?.games;
-  if (!Array.isArray(games)) return [];
-
-  return games
-    .filter((game): game is Record<string, unknown> =>
-      typeof game === "object" && game !== null && typeof game.gameId === "number",
-    )
-    .map((game) => ({
-      gameId: game.gameId as number,
-      gameType: String(game.gameType ?? ""),
-      gameMode: String(game.gameMode ?? ""),
-      mapId: Number(game.mapId ?? -1),
-      gameDuration: Number(game.gameDuration ?? 0),
-    }))
-    .sort((a, b) => b.gameId - a.gameId);
 }
 
 function indent(text: string, spaces = 2): string {
