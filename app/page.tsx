@@ -18,6 +18,11 @@ const SECTIONS = [
     title: "History",
     description: "Every game played so far, and who won.",
   },
+  {
+    href: "/stats",
+    title: "Stats",
+    description: "Games, win rate, KDA and who plays what.",
+  },
 ] as const;
 
 export default function HomePage() {
@@ -32,7 +37,7 @@ export default function HomePage() {
         yourselves.
       </p>
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-3">
+      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {SECTIONS.map((section) => (
           <Link
             key={section.href}

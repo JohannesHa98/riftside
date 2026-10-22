@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/new-game", label: "New game" },
   { href: "/players", label: "Players" },
   { href: "/history", label: "History" },
+  { href: "/stats", label: "Stats" },
 ] as const;
 
 /**

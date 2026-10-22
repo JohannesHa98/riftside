@@ -48,6 +48,14 @@ That changes how data loading works:
 | `npm run auth:new` | Generate a strong password and its hash |
 | `npm run auth:hash` | Hash a password you already have |
 
+Inside `companion/`:
+
+| Command | What it does |
+| --- | --- |
+| `npm start` | Watch the League client and send finished in-house games |
+| `npm run backfill` | Send any in-house game in recent history not sent yet |
+| `npm run probe` | Dump what the client returns to `fixtures/raw/` and exit |
+
 ## Auth
 
 One account: whoever knows the password behind `ADMIN_PASSWORD_HASH`. **Reading
@@ -79,6 +87,11 @@ variables. **Only two are used:**
 - `DATABASE_URL_UNPOOLED` — direct, used by drizzle-kit for migrations
 - `AUTH_SECRET` — signs the session cookie, 32+ random characters
 - `ADMIN_PASSWORD_HASH` — from `npm run auth:hash`
+- `INGEST_SECRET` — shared with the companion app, which sends it as
+  `x-ingest-secret`
+
+`companion/.env` holds `WEBSITE_URL`, the same `INGEST_SECRET`, and optionally
+`LOCKFILE_PATH`.
 
 `.env.example` lists all four. See `## Auth` below.
 
@@ -97,7 +110,21 @@ UI shows them as **Main / Fill / Never**, the words League players already use.
 wording can change without a migration.
 
 **Match** — date, the two teams, the suggested role per player (optional, since
-the teams may change them), and which team won.
+the teams may change them), and which team won. Once the companion app has
+matched it to a real game it also carries `riot_game_id` (unique, which is what
+makes ingest idempotent), the duration, and per player: champion, K/D/A, CS,
+gold and damage.
+
+`match_players.player_id` is **nullable**: a League participant who is not on
+the roster is still stored, with their Riot identity, and shown as unlinked.
+That is why the table has a surrogate `id` and a partial unique index rather
+than a composite primary key. `power_at_time` is nullable for the same reason.
+
+**`role` is the balancer's suggestion and is never overwritten.** What the
+client thinks someone played is kept separately in `client_lane` /
+`client_role` and is not shown as fact — it is derived from movement and is
+plainly wrong in custom games. A real in-house game came back with two
+junglers, two mids and no top.
 
 ## Two systems that must stay separate
 
@@ -147,28 +174,86 @@ site gets opened for.
 1. **New game** — pick 10 players, run the balancer, show both teams side by side with total power, suggested roles, and each player's comfort on that role, then save the played game (teams, optional roles, winner)
 2. **Players** — list, add, edit, delete players with power level and per-role comfort
 3. **History** — past games, and filling in a winner afterwards
+4. **Stats** — games, win rate, KDA and most-played champions per player
 
 ## Planned later (do not build yet, but do not design it out)
 
 - Elo-style automatic power adjustment from wins and losses
-- Player stats: win rate, games played
+- Linking an unlinked participant to a player from the History page
 
 ## Layout
 
 ```
 app/
-  players/     list, add, edit, delete  (actions.ts, player-form.tsx)
   new-game/    pick ten, balance, save  (actions.ts, team-picker.tsx)
+  players/     list, add, edit, delete  (actions.ts, player-form.tsx)
   history/     past games, set winner   (actions.ts, winner-buttons.tsx)
+  stats/       per-player totals
+  login/       the one account
+  api/ingest/  receives games from the companion app
 components/    shared UI (nav, cards, badges, primitives)
 db/            schema, client, queries, migrations
-lib/           types, player mapping, balance.ts + balance.test.ts
+lib/           types, balance, auth, ingest rules, champion names
+companion/     the Windows companion app (its own package)
 ```
 
 The balancer runs in the browser, not on the server: it is pure and the
 whole search is 126 splits, so it costs less than a round trip and lets
 the selection re-rank instantly. Server components hand the client only
 the four fields it needs.
+
+## Companion app (`companion/`)
+
+A separate Node package that runs on a player's Windows PC while the League
+client is open, notices finished in-house games and posts them to
+`/api/ingest`. Riot's public API does not include custom games; the client's
+own local API (the LCU) does.
+
+**Read-only.** It never sends a command to the client or automates anything
+in-game, and nothing should ever make it do so.
+
+- No build step: Node runs the TypeScript by stripping types, so imports carry
+  `.ts` extensions and `erasableSyntaxOnly` is on. The only runtime dependency
+  is `ws`. The root `tsconfig.json` excludes this folder; it has its own.
+- **`src/parse.ts` holds every assumption about the client's data**, with no
+  imports and no I/O. The LCU API is undocumented and unversioned, so when Riot
+  changes something this should be the only file to touch.
+- **Do not trust remembered field names.** `npm run probe` dumps real responses
+  to `fixtures/raw/` and prints their shape; build parsing from that. Three
+  that are not what you would guess: `teams[].win` is the string `"Win"`/
+  `"Fail"`, CS is `totalMinionsKilled` **plus** `neutralMinionsKilled`, and
+  `participantIdentities` joins on `participantId`, not list position.
+- An in-house game is `CUSTOM_GAME` + `CLASSIC` + map 11 + ten players. All
+  four matter: a real history also holds ARAM customs (mode `KIWI`, map 12)
+  and practice tool runs, which are custom games too. The ten-player check
+  needs the game *detail* — the history list only carries the current summoner.
+- Tests run from the repo root, against committed fixtures that are real
+  responses with identities swapped for fakes (`scripts/make-fixture.mjs`).
+  `fixtures/raw/`, `.env` and `sent-games.json` stay out of git.
+
+### Ingest
+
+`POST /api/ingest`, guarded by `INGEST_SECRET` in an `x-ingest-secret` header,
+compared in constant time. The secret lives on someone else's PC, so it means
+"this came from our companion", not "this is true" — `lib/ingest.ts` validates
+the body like any untrusted input, and the route can only write a game.
+
+Participants match on PUUID first, Riot ID second, never two to the same
+player; a Riot ID match backfills the PUUID so the name-based guess is needed
+only once. Ingest is idempotent on `riot_game_id`.
+
+A suggestion saved on the New game page is already a match row, so a game with
+those same ten players within six hours **fills that row in** rather than
+creating a second. The side comes from the game, since where someone actually
+played is a fact and the winner is recorded in those terms.
+
+### Champion names
+
+`lib/champions.ts` is the one place `"use cache"` is right rather than the
+uncached-plus-Suspense rule above: it is external reference data from Community
+Dragon, identical for everyone, changing a few times a year. It falls back to
+showing ids if the fetch fails, because a cosmetic lookup should never produce
+an error page.
 
 ## Conventions
 

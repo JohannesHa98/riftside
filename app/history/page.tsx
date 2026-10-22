@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Suspense } from "react";
 
 import { EmptyState, PageHeader } from "@/components/ui";
@@ -8,6 +9,7 @@ import {
   type MatchSummary,
 } from "@/db/queries";
 import { isSignedIn } from "@/lib/auth";
+import { championIconUrl, championLabel, championNames } from "@/lib/champions";
 import { ROLE_LABELS, type Team } from "@/lib/types";
 
 import { WinnerButtons } from "./winner-buttons";
@@ -25,7 +27,11 @@ export default function HistoryPage() {
 }
 
 async function Matches() {
-  const [matches, canEdit] = await Promise.all([listMatches(), isSignedIn()]);
+  const [matches, canEdit, champions] = await Promise.all([
+    listMatches(),
+    isSignedIn(),
+    championNames(),
+  ]);
 
   if (matches.length === 0) {
     return (
@@ -38,7 +44,12 @@ async function Matches() {
   return (
     <div className="space-y-3">
       {matches.map((match) => (
-        <MatchCard key={match.id} match={match} canEdit={canEdit} />
+        <MatchCard
+          key={match.id}
+          match={match}
+          canEdit={canEdit}
+          champions={champions}
+        />
       ))}
     </div>
   );
@@ -47,9 +58,11 @@ async function Matches() {
 function MatchCard({
   match,
   canEdit,
+  champions,
 }: {
   match: MatchSummary;
   canEdit: boolean;
+  champions: Map<number, string>;
 }) {
   return (
     <details className="rounded-lg border border-line bg-panel">
@@ -71,13 +84,38 @@ function MatchCard({
           <Side side="red" power={totalPower(match.red)} winner={match.winner} />
         </span>
 
+        {match.durationSeconds !== null ? (
+          <span className="text-xs text-ink-dim tabular-nums">
+            {Math.round(match.durationSeconds / 60)} min
+          </span>
+        ) : null}
+
+        {match.fromRiot ? (
+          <span
+            title="Picked up automatically from the League client"
+            className="rounded border border-gold/40 bg-gold/10 px-1.5 py-0.5 text-[10px] font-medium text-gold uppercase"
+          >
+            Tracked
+          </span>
+        ) : null}
+
         <span className="ml-auto text-xs text-ink-dim">Line-ups</span>
       </summary>
 
       <div className="border-t border-line p-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Lineup side="blue" players={match.blue} winner={match.winner} />
-          <Lineup side="red" players={match.red} winner={match.winner} />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Lineup
+            side="blue"
+            players={match.blue}
+            winner={match.winner}
+            champions={champions}
+          />
+          <Lineup
+            side="red"
+            players={match.red}
+            winner={match.winner}
+            champions={champions}
+          />
         </div>
 
         {canEdit ? (
@@ -114,10 +152,12 @@ function Lineup({
   side,
   players,
   winner,
+  champions,
 }: {
   side: Team;
   players: MatchParticipant[];
   winner: Team | null;
+  champions: Map<number, string>;
 }) {
   const colour = side === "blue" ? "text-blue-side" : "text-red-side";
   const label = side === "blue" ? "Blue side" : "Red side";
@@ -129,20 +169,83 @@ function Lineup({
         {winner === side ? <span className="ml-1 text-good">won</span> : null}
       </h3>
 
-      <ul className="space-y-1">
-        {players.map((player) => (
-          <li key={player.playerId} className="flex items-center gap-2 text-sm">
-            <span className="w-14 shrink-0 text-xs text-ink-dim">
-              {player.role ? ROLE_LABELS[player.role] : "—"}
-            </span>
-            <span className="mr-auto truncate">{player.name}</span>
-            <span className="text-xs text-ink-dim tabular-nums">
-              {player.powerAtTime}
-            </span>
-          </li>
+      <ul className="divide-y divide-line/60">
+        {players.map((player, index) => (
+          <ParticipantRow
+            key={player.playerId ?? `unlinked-${index}`}
+            player={player}
+            champions={champions}
+          />
         ))}
       </ul>
     </section>
+  );
+}
+
+function ParticipantRow({
+  player,
+  champions,
+}: {
+  player: MatchParticipant;
+  champions: Map<number, string>;
+}) {
+  const icon = championIconUrl(player.championId);
+  const hasStats = player.kills !== null;
+
+  return (
+    <li className="flex items-center gap-2 py-1.5 text-sm">
+      {icon !== null ? (
+        <Image
+          src={icon}
+          alt={championLabel(champions, player.championId)}
+          title={championLabel(champions, player.championId)}
+          width={24}
+          height={24}
+          unoptimized
+          className="size-6 shrink-0 rounded"
+        />
+      ) : (
+        <span className="w-12 shrink-0 text-xs text-ink-dim">
+          {player.role ? ROLE_LABELS[player.role] : "—"}
+        </span>
+      )}
+
+      <span className="mr-auto min-w-0 truncate">
+        {player.name}
+        {player.unlinked ? (
+          <span
+            title="Not linked to a player yet — set their Riot ID on the Players page"
+            className="ml-1 rounded border border-line px-1 text-[10px] text-ink-dim"
+          >
+            unlinked
+          </span>
+        ) : null}
+      </span>
+
+      {hasStats ? (
+        <>
+          <span className="shrink-0 text-xs tabular-nums" title="Kills / deaths / assists">
+            {player.kills}/{player.deaths}/{player.assists}
+          </span>
+          <span
+            className="hidden shrink-0 text-xs text-ink-dim tabular-nums sm:inline"
+            title="Creep score"
+          >
+            {player.cs} cs
+          </span>
+          <span
+            className="hidden shrink-0 text-xs text-ink-dim tabular-nums md:inline"
+            title="Damage to champions"
+          >
+            {Math.round((player.damage ?? 0) / 1000)}k
+          </span>
+        </>
+      ) : (
+        <span className="shrink-0 text-xs text-ink-dim tabular-nums">
+          {player.powerAtTime ?? "—"}
+        </span>
+      )}
+    </li>
   );
 }
 

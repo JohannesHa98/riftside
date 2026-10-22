@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      // Champion portraits, looked up by the numeric id the client gives us.
+      { protocol: "https", hostname: "cdn.communitydragon.org" },
+    ],
+  },
   experimental: {
     agentFeedback: true,
   },
