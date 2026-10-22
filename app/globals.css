@@ -143,8 +143,8 @@ body {
 
 .scroll-x::-webkit-scrollbar-track {
   background: transparent;
-  /* Holds both ends clear of the panel's corners. */
-  margin-inline: 0.75rem;
+  /* Just enough to stay off the panel's corners. */
+  margin-inline: 0.25rem;
 }
 
 .scroll-x::-webkit-scrollbar-thumb {
