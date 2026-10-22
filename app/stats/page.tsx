@@ -54,11 +54,11 @@ async function Table() {
         <table className="w-full min-w-136 text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs text-ink-dim uppercase">
-              <th className="w-10 py-2 pr-1 pl-4 text-right font-medium">#</th>
+              <th className="w-8 py-2 pr-1 pl-2 text-right font-medium">#</th>
               <th className="px-2 py-2 font-medium">Player</th>
-              <th className="px-2 py-2 text-right font-medium">Games</th>
-              <th className="px-2 py-2 text-right font-medium">Win rate</th>
-              <th className="px-2 py-2 text-right font-medium">KDA</th>
+              <th className="px-2 py-2 font-medium">Games</th>
+              <th className="px-2 py-2 font-medium">Win rate</th>
+              <th className="px-2 py-2 font-medium">KDA</th>
               <th className="px-4 py-2 font-medium">Most played</th>
             </tr>
           </thead>
@@ -122,7 +122,7 @@ function Row({
   return (
     <tr className={player.archived ? "opacity-60" : undefined}>
       <td
-        className="py-2 pr-1 pl-4 text-right text-ink-dim tabular-nums"
+        className="py-2 pr-1 pl-2 text-right text-ink-dim tabular-nums"
         title={
           rank === null
             ? `Unranked until ${MIN_RANKED_GAMES} games with a result`
@@ -150,7 +150,7 @@ function Row({
       </td>
 
       <td
-        className="px-2 py-2 text-right tabular-nums"
+        className="px-2 py-2 tabular-nums"
         title={
           player.games > player.decided
             ? `${player.games - player.decided} further game(s) have no winner recorded`
@@ -160,7 +160,7 @@ function Row({
         {player.decided}
       </td>
 
-      <td className="px-2 py-2 text-right tabular-nums">
+      <td className="px-2 py-2 tabular-nums">
         {rate === null ? (
           <span className="text-ink-dim">—</span>
         ) : (
@@ -173,7 +173,7 @@ function Row({
         )}
       </td>
 
-      <td className="px-2 py-2 text-right tabular-nums">
+      <td className="px-2 py-2 tabular-nums">
         {kda === null ? (
           <span className="text-ink-dim">—</span>
         ) : (
