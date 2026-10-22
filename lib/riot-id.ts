@@ -65,3 +65,21 @@ export function parsePuuid(input: unknown): PuuidResult {
 
   return { ok: true, value: text };
 }
+
+/**
+ * Link to a player's dpm.lol profile, which addresses people as
+ * gameName-tagLine.
+ *
+ * Both halves are URL-encoded: real Riot IDs in this group include spaces and
+ * non-ASCII tags. The separator stays a literal dash, which is what the site
+ * expects — a dash inside a game name is ambiguous, but that is dpm.lol's
+ * format rather than something to work around here.
+ */
+export function dpmProfileUrl(riotId: string | null | undefined): string | null {
+  const parsed = parseRiotId(riotId);
+  if (!parsed.ok || parsed.value === null) return null;
+
+  const [gameName, tagLine] = parsed.value.split("#");
+
+  return `https://dpm.lol/${encodeURIComponent(gameName)}-${encodeURIComponent(tagLine)}`;
+}

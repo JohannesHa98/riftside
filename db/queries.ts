@@ -155,6 +155,8 @@ export interface PlayerStats {
   name: string;
   power: number;
   archived: boolean;
+  /** For the link out to their dpm.lol profile; null if not set. */
+  riotId: string | null;
   /** Every game they appear in. */
   games: number;
   /** Games with a recorded winner — the only ones a win rate can use. */
@@ -182,6 +184,7 @@ export async function playerStats(): Promise<PlayerStats[]> {
       name: players.name,
       power: players.power,
       archived: players.archived,
+      riotId: players.riotId,
       team: matchPlayers.team,
       winner: matches.winner,
       kills: matchPlayers.kills,
@@ -206,6 +209,7 @@ export async function playerStats(): Promise<PlayerStats[]> {
         name: row.name,
         power: row.power,
         archived: row.archived,
+        riotId: row.riotId,
         games: 0,
         decided: 0,
         wins: 0,

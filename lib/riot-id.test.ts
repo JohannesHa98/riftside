@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parsePuuid, parseRiotId, riotIdKey } from "./riot-id";
+import { dpmProfileUrl, parsePuuid, parseRiotId, riotIdKey } from "./riot-id";
 
 describe("parseRiotId", () => {
   it("accepts an ordinary Riot ID", () => {
@@ -67,5 +67,34 @@ describe("parsePuuid", () => {
     expect(parsePuuid("has spaces in it and is long enough")).toMatchObject({
       ok: false,
     });
+  });
+});
+
+describe("dpmProfileUrl", () => {
+  it("builds the profile link from a Riot ID", () => {
+    expect(dpmProfileUrl("ES0X#EUW")).toBe("https://dpm.lol/ES0X-EUW");
+  });
+
+  it("encodes a name with a space", () => {
+    expect(dpmProfileUrl("Morot Bicepz#EUW")).toBe(
+      "https://dpm.lol/Morot%20Bicepz-EUW",
+    );
+  });
+
+  it("encodes a non-ASCII tag", () => {
+    expect(dpmProfileUrl("Splurrp#귀찮게하지")).toBe(
+      `https://dpm.lol/Splurrp-${encodeURIComponent("귀찮게하지")}`,
+    );
+  });
+
+  it("has no link for a player without a Riot ID", () => {
+    for (const value of [null, undefined, "", "   "]) {
+      expect(dpmProfileUrl(value)).toBeNull();
+    }
+  });
+
+  it("has no link for a malformed Riot ID", () => {
+    expect(dpmProfileUrl("JustAName")).toBeNull();
+    expect(dpmProfileUrl("Name#TAG#EXTRA")).toBeNull();
   });
 });
