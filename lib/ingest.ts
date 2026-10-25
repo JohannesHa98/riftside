@@ -58,7 +58,16 @@ export interface IngestGame {
   gameVersion: string | null;
   participants: IngestParticipant[];
   bans: IngestBan[];
+  /** The client's original response, archived as sent. Null if absent. */
+  raw: unknown;
 }
+
+/**
+ * A real game is about 30 KB. The cap is not about disk, it is about a body
+ * from a machine we do not control not being able to push anything it likes
+ * into the database.
+ */
+export const MAX_RAW_BYTES = 2_000_000;
 
 export type IngestParse =
   | { ok: true; game: IngestGame }
@@ -122,8 +131,26 @@ export function parseIngestPayload(body: unknown): IngestParse {
       gameVersion: typeof game.gameVersion === "string" ? game.gameVersion : null,
       participants,
       bans: parseBans(game.bans),
+      raw: parseRaw(game.raw),
     },
   };
+}
+
+/**
+ * Kept only if it is a JSON object of a sane size. An older companion sends
+ * nothing here, which is fine — the game is still worth having.
+ */
+function parseRaw(value: unknown): unknown {
+  if (asRecord(value) === null) return null;
+
+  try {
+    if (JSON.stringify(value).length > MAX_RAW_BYTES) return null;
+  } catch {
+    // Circular or otherwise unserialisable: not something to store.
+    return null;
+  }
+
+  return value;
 }
 
 /**

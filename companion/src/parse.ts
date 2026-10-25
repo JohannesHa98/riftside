@@ -60,6 +60,12 @@ export interface GamePayload {
   gameVersion: string | null;
   participants: ParticipantPayload[];
   bans: BanPayload[];
+  /**
+   * The client's whole response, untouched. The website archives it, because
+   * the client only keeps about twenty games and anything not captured now
+   * cannot be fetched again later.
+   */
+  raw: unknown;
 }
 
 export interface HistoryGame {
@@ -156,6 +162,7 @@ export function parseGame(raw: unknown): GamePayload {
       typeof game.gameVersion === "string" ? game.gameVersion : null,
     participants: parseParticipants(game, gameId),
     bans: parseBans(game.teams),
+    raw,
   };
 }
 

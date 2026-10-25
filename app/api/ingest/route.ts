@@ -53,9 +53,15 @@ export async function POST(request: Request): Promise<Response> {
     // in on a repeat send is free and saves deleting and re-sending a game
     // just to pick up data we did not used to store.
     const addedBans = await storeBansIfMissing(duplicate.id, game);
+    const addedRaw = await storeRawIfMissing(duplicate.id, game);
 
     return json(
-      { status: "duplicate", matchId: duplicate.id, bansAdded: addedBans },
+      {
+        status: "duplicate",
+        matchId: duplicate.id,
+        bansAdded: addedBans,
+        rawAdded: addedRaw,
+      },
       200,
     );
   }
@@ -145,6 +151,32 @@ async function storeBansIfMissing(
   return game.bans.length;
 }
 
+/**
+ * Fills in the archived response for a game sent before the column existed.
+ * Never overwrites one already stored.
+ */
+async function storeRawIfMissing(
+  matchId: number,
+  game: IngestGame,
+): Promise<boolean> {
+  if (game.raw === null) return false;
+
+  const [existing] = await db
+    .select({ rawPayload: matches.rawPayload })
+    .from(matches)
+    .where(eq(matches.id, matchId))
+    .limit(1);
+
+  if (existing === undefined || existing.rawPayload !== null) return false;
+
+  await db
+    .update(matches)
+    .set({ rawPayload: game.raw })
+    .where(eq(matches.id, matchId));
+
+  return true;
+}
+
 /** Postgres unique-violation on matches.riot_game_id. */
 function isDuplicateGame(error: unknown): boolean {
   return (
@@ -227,6 +259,7 @@ async function createMatch(
       riotGameId: game.gameId,
       durationSeconds: game.durationSeconds,
       source: "riot",
+      rawPayload: game.raw,
     })
     .returning({ id: matches.id });
 
@@ -274,6 +307,7 @@ async function fillInSuggestion(
       riotGameId: game.gameId,
       durationSeconds: game.durationSeconds,
       source: "riot",
+      rawPayload: game.raw,
     })
     .where(eq(matches.id, matchId));
 

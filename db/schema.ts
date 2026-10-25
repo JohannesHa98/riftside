@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -80,6 +81,16 @@ export const matches = pgTable("matches", {
   riotGameId: bigint("riot_game_id", { mode: "number" }).unique(),
   durationSeconds: integer("duration_seconds"),
   source: matchSourceEnum().notNull().default("manual"),
+
+  /**
+   * The League client's whole response for this game, exactly as it arrived.
+   *
+   * The columns above are what the app reads; this is the archive. The client
+   * only keeps about twenty games of history, so a stat not captured at
+   * ingest time is gone for good — keeping the original means a question we
+   * think of later is a query rather than a regret. Roughly 30 KB a game.
+   */
+  rawPayload: jsonb("raw_payload"),
 
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
