@@ -1,4 +1,4 @@
-# In-house companion
+# Riftside companion
 
 Runs on a Windows PC while the League client is open, notices when an in-house
 custom game finishes, and sends it to the website.

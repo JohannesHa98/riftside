@@ -21,8 +21,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "In-house League",
-  description: "Balanced 5v5 teams for in-house League of Legends games.",
+  title: "Riftside",
+  description: "Two even sides of the Rift for in-house League of Legends games.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

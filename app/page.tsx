@@ -29,7 +29,7 @@ export default function HomePage() {
   return (
     <div>
       <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-        <span className="text-gold">In-house</span> League
+        <span className="text-gold">Rift</span>side
       </h1>
       <p className="mt-2 max-w-prose text-ink-dim">
         Pick ten players and get two balanced teams, with a suggested role for

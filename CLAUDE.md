@@ -2,8 +2,10 @@
 
 ## What this is
 
-A private website for organising 5v5 in-house League of Legends games with a
-fixed group of friends. The core feature is a **team balancer**: pick the 10
+**Riftside** — a private website for organising 5v5 in-house League of Legends
+games with a fixed group of friends. The name is the job: it decides which
+side of the Rift each player ends up on, which is the vocabulary the UI
+already uses (Blue side, Red side). The core feature is a **team balancer**: pick the 10
 players who are playing tonight, and the app splits them into two even teams and
 suggests a role for each player. Suggested roles are a starting point only — the
 teams settle roles among themselves.
@@ -17,7 +19,7 @@ Reading is open to anyone. **Editing needs a login** — see `## Auth`.
 - **Neon Postgres** through `@neondatabase/serverless`
 - **Drizzle ORM** + **drizzle-kit** migrations
 - **Vitest** for unit tests
-- Hosted on **Vercel**; pushing to `master` deploys automatically
+- Hosted on **Vercel** at `riftside.vercel.app`; pushing to `master` deploys automatically
 - Package manager: **npm**
 
 ### Next.js 16 specifics
