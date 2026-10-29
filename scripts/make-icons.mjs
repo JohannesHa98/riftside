@@ -1,57 +1,106 @@
 /**
- * Draws the site icon at the sizes a browser asks for.
+ * Draws the small icons from `app/icon.png`, which is the master artwork.
  *
- * The mark is the Rift seen from above: one square, split corner to corner by
- * the river, blue side at the bottom left and red side at the top right —
- * which is the whole job of the site in one shape.
+ * Run it with `node scripts/make-icons.mjs` whenever that file changes. It
+ * writes `app/favicon.ico` (16/32/48, for anything still asking for
+ * /favicon.ico) and `app/apple-icon.png` (the iOS home-screen icon). Next
+ * picks all three up by filename; nothing imports them.
  *
- * `app/icon.svg` is the same drawing by hand and is what modern browsers use;
- * this script exists for the raster sizes that cannot be SVG (`favicon.ico`
- * for the odd client that still fetches it, and the iOS home-screen icon).
- * Run it with `node scripts/make-icons.mjs` after changing either.
+ * The mark is a neon square, blue side and red side. Thin bright lines on
+ * black are exactly what a plain downscale ruins: averaging a one-pixel line
+ * across a twenty-pixel box leaves a grey smudge. So the averaging happens in
+ * linear light and each size is exposed back up afterwards — the smaller the
+ * icon, the more of a boost it needs to still read as neon.
  */
 
-import { writeFileSync } from "node:fs";
-import { deflateSync } from "node:zlib";
+import { readFileSync, writeFileSync } from "node:fs";
+import { deflateSync, inflateSync } from "node:zlib";
 
-// Straight from the dark theme's tokens in app/globals.css.
-const SURFACE = [10, 13, 19];
-const BLUE = [75, 139, 245];
-const RED = [242, 97, 92];
-const GOLD = [200, 170, 110];
+/** Exposure per size, chosen by looking at them rather than by formula. */
+const BOOST = { 16: 4, 32: 2.4, 48: 1.9, 180: 1.15 };
 
-/** Fractions of the icon's width, so every size is the same drawing. */
-const CORNER = 0.22;
-/** Half the river's width, and of the gold running down the middle of it. */
-const RIVER = 0.075;
-const SEAM = 0.03;
-/** Samples per pixel per side; what gives the edges their antialiasing. */
-const SUPERSAMPLE = 4;
+function decode(buffer) {
+  let offset = 8;
+  const idat = [];
+  let width = 0;
+  let height = 0;
+  let channels = 0;
 
-function roundedSquareCovers(x, y, corner) {
-  // Distance into the nearest corner's box, clamped to it.
-  const dx = Math.max(corner - x, x - (1 - corner), 0);
-  const dy = Math.max(corner - y, y - (1 - corner), 0);
-  if (dx === 0 || dy === 0) return x >= 0 && x <= 1 && y >= 0 && y <= 1;
-  return dx * dx + dy * dy <= corner * corner;
+  while (offset < buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString("ascii", offset + 4, offset + 8);
+    const data = buffer.subarray(offset + 8, offset + 8 + length);
+
+    if (type === "IHDR") {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      channels = data[9] === 6 ? 4 : data[9] === 2 ? 3 : 0;
+      if (channels === 0 || data[8] !== 8) {
+        throw new Error("The master must be an 8-bit RGB or RGBA PNG.");
+      }
+    } else if (type === "IDAT") {
+      idat.push(data);
+    }
+
+    offset += 12 + length;
+  }
+
+  const raw = inflateSync(Buffer.concat(idat));
+  const stride = width * channels;
+  const pixels = Buffer.alloc(width * height * 4);
+  let prior = Buffer.alloc(stride);
+
+  for (let row = 0; row < height; row += 1) {
+    const filter = raw[row * (stride + 1)];
+    const line = Buffer.from(
+      raw.subarray(row * (stride + 1) + 1, (row + 1) * (stride + 1)),
+    );
+
+    // Undo the row's filter: every byte is stored relative to its neighbours.
+    for (let i = 0; i < stride; i += 1) {
+      const a = i >= channels ? line[i - channels] : 0;
+      const b = prior[i];
+      const c = i >= channels ? prior[i - channels] : 0;
+      let value = line[i];
+
+      if (filter === 1) value += a;
+      else if (filter === 2) value += b;
+      else if (filter === 3) value += (a + b) >> 1;
+      else if (filter === 4) {
+        const p = a + b - c;
+        const pa = Math.abs(p - a);
+        const pb = Math.abs(p - b);
+        const pc = Math.abs(p - c);
+        value += pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+      }
+
+      line[i] = value & 0xff;
+    }
+
+    for (let column = 0; column < width; column += 1) {
+      const from = column * channels;
+      const to = (row * width + column) * 4;
+      pixels[to] = line[from];
+      pixels[to + 1] = line[from + 1];
+      pixels[to + 2] = line[from + 2];
+      pixels[to + 3] = channels === 4 ? line[from + 3] : 255;
+    }
+
+    prior = line;
+  }
+
+  return { width, height, pixels };
 }
 
-/** The colour of one sample point, or null where the icon is transparent. */
-function sample(x, y, corner) {
-  if (!roundedSquareCovers(x, y, corner)) return null;
+const toLinear = (value) => (value / 255) ** 2.2;
+const toSrgb = (value) =>
+  Math.round(Math.min(1, Math.max(0, value)) ** (1 / 2.2) * 255);
 
-  // The river runs from the top left corner to the bottom right one, which
-  // leaves the bottom left half blue and the top right half red. The gold
-  // down the middle of it is the one the wordmark uses.
-  const side = (y - x) / Math.SQRT2;
-  if (Math.abs(side) <= SEAM) return GOLD;
-  if (Math.abs(side) <= RIVER) return SURFACE;
-  return side > 0 ? BLUE : RED;
-}
-
-function render(size, corner = CORNER) {
-  const pixels = Buffer.alloc(size * size * 4);
-  const step = 1 / (size * SUPERSAMPLE);
+/** Box downscale of the square master, averaged in linear light. */
+function resize(master, size) {
+  const boost = BOOST[size] ?? 1;
+  const out = Buffer.alloc(size * size * 4);
+  const scale = master.width / size;
 
   for (let row = 0; row < size; row += 1) {
     for (let column = 0; column < size; column += 1) {
@@ -59,35 +108,37 @@ function render(size, corner = CORNER) {
       let g = 0;
       let b = 0;
       let alpha = 0;
+      let samples = 0;
 
-      for (let sy = 0; sy < SUPERSAMPLE; sy += 1) {
-        for (let sx = 0; sx < SUPERSAMPLE; sx += 1) {
-          const x = (column * SUPERSAMPLE + sx + 0.5) * step;
-          const y = (row * SUPERSAMPLE + sy + 0.5) * step;
-          const colour = sample(x, y, corner);
-          if (colour === null) continue;
+      // At least one source pixel per target pixel, however the edges land.
+      const top = Math.floor(row * scale);
+      const left = Math.floor(column * scale);
+      const bottom = Math.max(Math.floor((row + 1) * scale), top + 1);
+      const right = Math.max(Math.floor((column + 1) * scale), left + 1);
 
-          r += colour[0];
-          g += colour[1];
-          b += colour[2];
-          alpha += 1;
+      for (let y = top; y < bottom; y += 1) {
+        for (let x = left; x < right; x += 1) {
+          const i =
+            (Math.min(y, master.height - 1) * master.width +
+              Math.min(x, master.width - 1)) *
+            4;
+          r += toLinear(master.pixels[i]);
+          g += toLinear(master.pixels[i + 1]);
+          b += toLinear(master.pixels[i + 2]);
+          alpha += master.pixels[i + 3];
+          samples += 1;
         }
       }
 
       const offset = (row * size + column) * 4;
-      if (alpha === 0) continue;
-
-      // Averaged over the samples that landed inside, then faded by how many
-      // did — so the edge is antialiased rather than stepped.
-      const total = SUPERSAMPLE * SUPERSAMPLE;
-      pixels[offset] = Math.round(r / alpha);
-      pixels[offset + 1] = Math.round(g / alpha);
-      pixels[offset + 2] = Math.round(b / alpha);
-      pixels[offset + 3] = Math.round((alpha / total) * 255);
+      out[offset] = toSrgb((r / samples) * boost);
+      out[offset + 1] = toSrgb((g / samples) * boost);
+      out[offset + 2] = toSrgb((b / samples) * boost);
+      out[offset + 3] = Math.round(alpha / samples);
     }
   }
 
-  return pixels;
+  return out;
 }
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
@@ -115,8 +166,8 @@ function chunk(type, data) {
   return Buffer.concat([length, body, crc]);
 }
 
-/** A plain 8-bit RGBA PNG. No dependency does this for us at build time. */
-function png(size, pixels) {
+/** A plain 8-bit RGBA PNG. The project carries no image library. */
+function encode(size, pixels) {
   const header = Buffer.alloc(13);
   header.writeUInt32BE(size, 0);
   header.writeUInt32BE(size, 4);
@@ -126,7 +177,6 @@ function png(size, pixels) {
   // Each row carries a filter byte; 0 means the bytes are stored as they are.
   const raw = Buffer.alloc(size * (size * 4 + 1));
   for (let row = 0; row < size; row += 1) {
-    raw[row * (size * 4 + 1)] = 0;
     pixels.copy(raw, row * (size * 4 + 1) + 1, row * size * 4, (row + 1) * size * 4);
   }
 
@@ -139,9 +189,7 @@ function png(size, pixels) {
 }
 
 /** An .ico is a directory of images; since Vista each may be a whole PNG. */
-function ico(sizes) {
-  const images = sizes.map((size) => png(size, render(size)));
-
+function ico(images, sizes) {
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0); // reserved
   header.writeUInt16LE(1, 2); // type: icon
@@ -165,10 +213,20 @@ function ico(sizes) {
   return Buffer.concat([header, ...entries, ...images]);
 }
 
-const target = process.argv[2] ?? "app";
+const folder = process.argv[2] ?? "app";
+const master = decode(readFileSync(`${folder}/icon.png`));
+if (master.width !== master.height) {
+  throw new Error(`${folder}/icon.png must be square.`);
+}
 
-writeFileSync(`${target}/favicon.ico`, ico([16, 32, 48]));
-// Square: iOS rounds the home-screen icon itself, and fills anything
-// transparent with black while it is at it.
-writeFileSync(`${target}/apple-icon.png`, png(180, render(180, 0)));
-console.log(`Wrote ${target}/favicon.ico and ${target}/apple-icon.png`);
+const SIZES = [16, 32, 48];
+
+writeFileSync(
+  `${folder}/favicon.ico`,
+  ico(
+    SIZES.map((size) => encode(size, resize(master, size))),
+    SIZES,
+  ),
+);
+writeFileSync(`${folder}/apple-icon.png`, encode(180, resize(master, 180)));
+console.log(`Wrote ${folder}/favicon.ico and ${folder}/apple-icon.png`);
