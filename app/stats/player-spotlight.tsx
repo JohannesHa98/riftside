@@ -9,6 +9,9 @@ import type { GameHighlight, PlayerProfile, SpotlightAxis } from "@/db/queries";
 
 import { Radar, RadarLegend } from "./radar";
 
+/** How many champions the spotlight lists under "Plays most". */
+const CHAMPIONS_SHOWN = 10;
+
 /**
  * One player, picked by search, drawn against the group.
  *
@@ -181,7 +184,7 @@ export function PlayerSpotlight({
                   Plays most
                 </h3>
                 <ul className="flex flex-wrap gap-2">
-                  {player.champions.slice(0, 6).map((champion) => (
+                  {player.champions.slice(0, CHAMPIONS_SHOWN).map((champion) => (
                     <li
                       key={champion.championId}
                       className="flex items-center gap-1.5 rounded-md border border-line bg-surface/60 px-2 py-1"
