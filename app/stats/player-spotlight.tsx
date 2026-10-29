@@ -130,7 +130,7 @@ export function PlayerSpotlight({
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Tile
                 label="Win rate"
                 value={
@@ -227,7 +227,7 @@ function Tile({
   return (
     <div className="rounded-md border border-line bg-surface/60 px-3 py-2">
       <p className="text-xs text-ink-dim uppercase">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold tabular-nums">{value}</p>
+      <p className="mt-0.5 text-base font-semibold tabular-nums">{value}</p>
       <p className="truncate text-xs text-ink-dim">{note}</p>
     </div>
   );
