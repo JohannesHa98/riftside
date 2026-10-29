@@ -36,6 +36,13 @@
       "when": 1792972613042,
       "tag": "0004_raw_payload",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793287986895,
+      "tag": "0005_role_quest_item",
+      "breakpoints": true
     }
   ]
 }

@@ -150,6 +150,14 @@ export const matchPlayers = pgTable(
      */
     clientLane: text("client_lane"),
     clientRole: text("client_role"),
+
+    /**
+     * The role quest reward item, which the game hands out by lane: 1221 and
+     * 1220 top, 1209 jungle, 1206 mid, 1208 support. Unlike the lane guess
+     * above this is a fact about what the game decided someone was playing,
+     * so it is what line-ups are ordered by.
+     */
+    roleQuestItem: integer("role_quest_item"),
   },
   (table) => [
     // Replaces the old composite primary key. Partial, so many unlinked

@@ -40,6 +40,11 @@ export interface ParticipantPayload {
    */
   clientLane: string | null;
   clientRole: string | null;
+  /**
+   * The role quest reward the game gave this player. Unlike the lane guess
+   * above, this says which role the game itself assigned them.
+   */
+  roleQuestItem: number | null;
 }
 
 export interface BanPayload {
@@ -293,6 +298,10 @@ function parseParticipants(
       damage: count(stats.totalDamageDealtToChampions),
       clientLane: optionalText(timeline.lane),
       clientRole: optionalText(timeline.role),
+      roleQuestItem:
+        typeof stats.roleBoundItem === "number" && stats.roleBoundItem > 0
+          ? stats.roleBoundItem
+          : null,
     };
   });
 }

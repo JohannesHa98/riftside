@@ -343,6 +343,7 @@ function statsOf(entry: LinkedParticipant) {
     damage: participant.damage,
     clientLane: participant.clientLane,
     clientRole: participant.clientRole,
+    roleQuestItem: participant.roleQuestItem,
   };
 }
 

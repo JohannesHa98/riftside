@@ -40,6 +40,10 @@ export interface MatchParticipant {
    */
   clientLane: string | null;
   clientRole: string | null;
+  /** The role quest reward item the game handed out. */
+  roleQuestItem: number | null;
+  /** Worked out from the above. Null only if there was nothing to go on. */
+  position: Role | null;
 
   /** From the League client. Null on a game saved by hand. */
   championId: number | null;
@@ -64,31 +68,69 @@ export interface MatchSummary {
 }
 
 /**
- * Where to place someone in a line-up: top, jungle, mid, bot, support.
- *
- * The balancer's suggested role is used when there is one, since we chose it.
- * Otherwise the client's lane is the only signal there is. It is a guess and
- * sometimes a poor one, but it beats listing a team alphabetically.
+ * The role quest reward the game hands out, which says what it decided
+ * someone was playing. Read off real games rather than documentation — see
+ * `scripts/` and the archived payloads.
  */
-function roleRank(participant: MatchParticipant): number {
-  if (participant.role !== null) return ROLES.indexOf(participant.role);
+const ROLE_BY_QUEST_ITEM: Record<number, Role> = {
+  1221: "top",
+  1220: "top", // Unleashed Teleport, the other top reward
+  1209: "jungle",
+  1206: "mid",
+  1208: "support",
+};
 
-  const lane = (participant.clientLane ?? "").toUpperCase();
-  const role = (participant.clientRole ?? "").toUpperCase();
+/**
+ * Roles in the order of how much CS they usually finish on, used to place
+ * anyone the quest item did not identify — in practice the bot lane and the
+ * support, whose rewards are often sold or replaced by the end of a game.
+ */
+const ROLES_BY_EXPECTED_CS: Role[] = ["bot", "top", "mid", "jungle", "support"];
 
-  if (lane === "TOP") return ROLES.indexOf("top");
-  if (lane === "JUNGLE") return ROLES.indexOf("jungle");
-  if (lane === "MIDDLE" || lane === "MID") return ROLES.indexOf("mid");
-  if (lane === "BOTTOM" || lane === "BOT") {
-    return ROLES.indexOf(role === "SUPPORT" ? "support" : "bot");
+/**
+ * Put a side in role order: top, jungle, mid, bot, support.
+ *
+ * The balancer's suggested role wins when the game was saved from a
+ * suggestion, since we chose it. Otherwise the role quest reward says what
+ * the game itself assigned. Only what is left over falls back to CS, which
+ * separates a bot lane from a support reliably enough.
+ *
+ * The client's own lane is deliberately not used: it is derived from movement
+ * and reports three junglers and no top in a real game of ours.
+ */
+function orderLineup(side: MatchParticipant[]): MatchParticipant[] {
+  const taken = new Set<Role>();
+  const undecided: MatchParticipant[] = [];
+
+  for (const participant of side) {
+    const known =
+      participant.role ??
+      (participant.roleQuestItem === null
+        ? undefined
+        : ROLE_BY_QUEST_ITEM[participant.roleQuestItem]);
+
+    if (known !== undefined && !taken.has(known)) {
+      participant.position = known;
+      taken.add(known);
+    } else {
+      undecided.push(participant);
+    }
   }
 
-  // Nothing to go on: after everyone we could place.
-  return ROLES.length;
+  const spare = ROLES_BY_EXPECTED_CS.filter((role) => !taken.has(role));
+  undecided
+    .sort((a, b) => (b.cs ?? 0) - (a.cs ?? 0))
+    .forEach((participant, index) => {
+      participant.position = spare[index] ?? null;
+    });
+
+  return [...side].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
 }
 
-function byRole(a: MatchParticipant, b: MatchParticipant): number {
-  return roleRank(a) - roleRank(b) || a.name.localeCompare(b.name);
+function rank(participant: MatchParticipant): number {
+  return participant.position === null
+    ? ROLES.length
+    : ROLES.indexOf(participant.position);
 }
 
 /** Past games, newest first, each with both rosters. */
@@ -109,6 +151,7 @@ export async function listMatches(limit = 50): Promise<MatchSummary[]> {
       powerAtTime: matchPlayers.powerAtTime,
       clientLane: matchPlayers.clientLane,
       clientRole: matchPlayers.clientRole,
+      roleQuestItem: matchPlayers.roleQuestItem,
       playerId: players.id,
       name: players.name,
       riotId: matchPlayers.riotId,
@@ -156,6 +199,8 @@ export async function listMatches(limit = 50): Promise<MatchSummary[]> {
       powerAtTime: row.powerAtTime,
       clientLane: row.clientLane,
       clientRole: row.clientRole,
+      roleQuestItem: row.roleQuestItem,
+      position: null,
       championId: row.championId,
       kills: row.kills,
       deaths: row.deaths,
@@ -167,8 +212,8 @@ export async function listMatches(limit = 50): Promise<MatchSummary[]> {
   }
 
   for (const summary of summaries.values()) {
-    summary.blue.sort(byRole);
-    summary.red.sort(byRole);
+    summary.blue = orderLineup(summary.blue);
+    summary.red = orderLineup(summary.red);
   }
 
   return rows.map((match) => summaries.get(match.id)!);

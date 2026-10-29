@@ -188,6 +188,7 @@ describe("linkParticipants", () => {
       damage: 0,
       clientLane: null,
       clientRole: null,
+      roleQuestItem: null,
       ...overrides,
     };
   }

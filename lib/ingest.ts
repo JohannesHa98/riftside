@@ -37,6 +37,8 @@ export interface IngestParticipant {
   damage: number;
   clientLane: string | null;
   clientRole: string | null;
+  /** The role quest reward item, which says what the game made them. */
+  roleQuestItem: number | null;
 }
 
 export interface IngestBan {
@@ -223,6 +225,7 @@ function parseParticipant(entry: unknown, index: number): ParticipantParse {
       damage: count(raw.damage),
       clientLane: optionalText(raw.clientLane),
       clientRole: optionalText(raw.clientRole),
+      roleQuestItem: count(raw.roleQuestItem) || null,
     },
   };
 }
