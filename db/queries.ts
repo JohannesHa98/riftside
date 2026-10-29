@@ -636,6 +636,27 @@ export const SPOTLIGHT_AXES: SpotlightAxis[] = [
   { key: "winRate", label: "Win rate" },
 ];
 
+export interface GameHighlight {
+  kills: number;
+  deaths: number;
+  assists: number;
+  championId: number | null;
+}
+
+/**
+ * How good a single game was.
+ *
+ * Kills count in full, assists half, and every death takes one back. Ranking
+ * on kills alone made a 20/5/10 tie with a 20/0/12 and keep whichever came
+ * first, which is plainly wrong. A KDA ratio goes too far the other way — it
+ * puts a quiet 5/0/5 above a 20/5/10 — and ranking on kills+assists with
+ * deaths as a tiebreak crowns a 30/15/5 fiesta. This one orders all of those
+ * the way you would say them out loud.
+ */
+export function gameScore(game: GameHighlight): number {
+  return game.kills + game.assists / 2 - game.deaths;
+}
+
 export interface PlayerProfile {
   playerId: number;
   name: string;
@@ -651,13 +672,9 @@ export interface PlayerProfile {
   assists: number;
   kda: number | null;
   champions: ChampionTally[];
-  /** Their best game by kills, for a bit of colour. */
-  best: {
-    kills: number;
-    deaths: number;
-    assists: number;
-    championId: number | null;
-  } | null;
+  /** Their best and worst game, scored by `gameScore` below. */
+  best: GameHighlight | null;
+  worst: GameHighlight | null;
   /** Raw value per axis, in SPOTLIGHT_AXES order. */
   raw: number[];
   /** The same values on 0-1, scaled against everyone else. */
@@ -737,6 +754,7 @@ export async function spotlight(): Promise<Spotlight> {
           kda: null,
           champions: [],
           best: null,
+          worst: null,
           raw: [],
           radar: [],
         },
@@ -765,14 +783,15 @@ export async function spotlight(): Promise<Spotlight> {
       entry.damage += row.damage ?? 0;
       entry.minutes += (row.durationSeconds ?? 0) / 60;
 
-      if (p.best === null || row.kills > p.best.kills) {
-        p.best = {
-          kills: row.kills,
-          deaths: row.deaths ?? 0,
-          assists: row.assists ?? 0,
-          championId: row.championId,
-        };
-      }
+      const game: GameHighlight = {
+        kills: row.kills,
+        deaths: row.deaths ?? 0,
+        assists: row.assists ?? 0,
+        championId: row.championId,
+      };
+
+      if (p.best === null || gameScore(game) > gameScore(p.best)) p.best = game;
+      if (p.worst === null || gameScore(game) < gameScore(p.worst)) p.worst = game;
     }
 
     if (row.championId !== null && row.championId > 0) {

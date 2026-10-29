@@ -145,12 +145,12 @@ export function Radar({
   );
 }
 
-export function RadarLegend() {
+export function RadarLegend({ name }: { name: string }) {
   return (
     <div className="flex flex-wrap items-center gap-4 text-xs text-ink-dim">
       <span className="flex items-center gap-1.5">
         <span className="h-0.5 w-5 rounded-full bg-gold" />
-        This player
+        {name}
       </span>
       <span className="flex items-center gap-1.5">
         <span

@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { PlayerName } from "@/components/player-name";
 import { inputStyles } from "@/components/ui";
-import type { PlayerProfile, SpotlightAxis } from "@/db/queries";
+import type { GameHighlight, PlayerProfile, SpotlightAxis } from "@/db/queries";
 
 import { Radar, RadarLegend } from "./radar";
 
@@ -125,12 +125,12 @@ export function PlayerSpotlight({
           <div>
             <Radar player={player} average={average} axes={axes} />
             <div className="mt-3">
-              <RadarLegend />
+              <RadarLegend name={player.name} />
             </div>
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
               <Tile
                 label="Win rate"
                 value={
@@ -156,16 +156,13 @@ export function PlayerSpotlight({
               />
               <Tile
                 label="Best game"
-                value={
-                  player.best === null
-                    ? "—"
-                    : `${player.best.kills}/${player.best.deaths}/${player.best.assists}`
-                }
-                note={
-                  player.best?.championId
-                    ? (champions[player.best.championId] ?? "most kills")
-                    : "most kills"
-                }
+                value={scoreline(player.best)}
+                note={championOf(player.best, champions)}
+              />
+              <Tile
+                label="Worst game"
+                value={scoreline(player.worst)}
+                note={championOf(player.worst, champions)}
               />
             </div>
 
@@ -204,6 +201,18 @@ export function PlayerSpotlight({
       </div>
     </section>
   );
+}
+
+function scoreline(game: GameHighlight | null): string {
+  return game === null ? "—" : `${game.kills}/${game.deaths}/${game.assists}`;
+}
+
+function championOf(
+  game: GameHighlight | null,
+  champions: Record<number, string>,
+): string {
+  if (game?.championId == null) return "—";
+  return champions[game.championId] ?? `#${game.championId}`;
 }
 
 function Tile({
