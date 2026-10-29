@@ -675,6 +675,11 @@ export interface PlayerProfile {
   /** Their best and worst game, scored by `gameScore` below. */
   best: GameHighlight | null;
   worst: GameHighlight | null;
+  /**
+   * Share of their team's kills they took part in, averaged over their
+   * games. Null when none of their games carry stats.
+   */
+  killParticipation: number | null;
   /** Raw value per axis, in SPOTLIGHT_AXES order. */
   raw: number[];
   /** The same values on 0-1, scaled against everyone else. */
@@ -693,10 +698,11 @@ export interface Spotlight {
  * some absolute nobody here would recognise.
  */
 export async function spotlight(): Promise<Spotlight> {
-  const [rows, ladder] = await Promise.all([
+  const [rows, ladder, sides] = await Promise.all([
     db
       .select({
         playerId: matchPlayers.playerId,
+        matchId: matchPlayers.matchId,
         name: players.name,
         riotId: players.riotId,
         power: players.power,
@@ -714,7 +720,22 @@ export async function spotlight(): Promise<Spotlight> {
       .innerJoin(players, eq(players.id, matchPlayers.playerId))
       .innerJoin(matches, eq(matches.id, matchPlayers.matchId)),
     playerStats(),
+    // Every participant, linked or not, so a team's kills are not
+    // undercounted by someone who is not on the roster.
+    db
+      .select({
+        matchId: matchPlayers.matchId,
+        team: matchPlayers.team,
+        kills: matchPlayers.kills,
+      })
+      .from(matchPlayers),
   ]);
+
+  const teamKills = new Map<string, number>();
+  for (const row of sides) {
+    const key = `${row.matchId}:${row.team}`;
+    teamKills.set(key, (teamKills.get(key) ?? 0) + (row.kills ?? 0));
+  }
 
   const rankByPlayer = new Map<number, number>();
   let position = 0;
@@ -728,6 +749,9 @@ export async function spotlight(): Promise<Spotlight> {
     cs: number;
     damage: number;
     tracked: number;
+    /** Summed per game, so one lopsided game cannot dominate the average. */
+    shareTotal: number;
+    shareGames: number;
     champions: Map<number, number>;
   }
 
@@ -755,6 +779,7 @@ export async function spotlight(): Promise<Spotlight> {
           champions: [],
           best: null,
           worst: null,
+          killParticipation: null,
           raw: [],
           radar: [],
         },
@@ -762,6 +787,8 @@ export async function spotlight(): Promise<Spotlight> {
         cs: 0,
         damage: 0,
         tracked: 0,
+        shareTotal: 0,
+        shareGames: 0,
         champions: new Map(),
       };
       running.set(row.playerId, entry);
@@ -792,6 +819,12 @@ export async function spotlight(): Promise<Spotlight> {
 
       if (p.best === null || gameScore(game) > gameScore(p.best)) p.best = game;
       if (p.worst === null || gameScore(game) < gameScore(p.worst)) p.worst = game;
+
+      const sideKills = teamKills.get(`${row.matchId}:${row.team}`) ?? 0;
+      if (sideKills > 0) {
+        entry.shareTotal += (row.kills + (row.assists ?? 0)) / sideKills;
+        entry.shareGames += 1;
+      }
     }
 
     if (row.championId !== null && row.championId > 0) {
@@ -806,6 +839,9 @@ export async function spotlight(): Promise<Spotlight> {
     const per = (total: number) => (totals.tracked === 0 ? 0 : total / totals.tracked);
     const perMinute = (total: number) =>
       totals.minutes === 0 ? 0 : total / totals.minutes;
+
+    profile.killParticipation =
+      totals.shareGames === 0 ? null : totals.shareTotal / totals.shareGames;
 
     profile.kda =
       totals.tracked === 0

@@ -164,6 +164,15 @@ export function PlayerSpotlight({
                 value={scoreline(player.worst)}
                 note={championOf(player.worst, champions)}
               />
+              <Tile
+                label="Kill participation"
+                value={
+                  player.killParticipation === null
+                    ? "—"
+                    : `${Math.round(player.killParticipation * 100)}%`
+                }
+                note="of their team's kills"
+              />
             </div>
 
             {player.champions.length > 0 ? (
