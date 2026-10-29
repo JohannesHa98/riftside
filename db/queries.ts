@@ -33,6 +33,14 @@ export interface MatchParticipant {
   /** Null for an unlinked participant, who has no power to snapshot. */
   powerAtTime: number | null;
 
+  /**
+   * The client's guess at where someone played. Used to order a line-up and
+   * nothing else — it is derived from movement and in custom games it can
+   * report three junglers and no top.
+   */
+  clientLane: string | null;
+  clientRole: string | null;
+
   /** From the League client. Null on a game saved by hand. */
   championId: number | null;
   kills: number | null;
@@ -55,10 +63,32 @@ export interface MatchSummary {
   red: MatchParticipant[];
 }
 
-/** Role order within a team, with unassigned players last. */
+/**
+ * Where to place someone in a line-up: top, jungle, mid, bot, support.
+ *
+ * The balancer's suggested role is used when there is one, since we chose it.
+ * Otherwise the client's lane is the only signal there is. It is a guess and
+ * sometimes a poor one, but it beats listing a team alphabetically.
+ */
+function roleRank(participant: MatchParticipant): number {
+  if (participant.role !== null) return ROLES.indexOf(participant.role);
+
+  const lane = (participant.clientLane ?? "").toUpperCase();
+  const role = (participant.clientRole ?? "").toUpperCase();
+
+  if (lane === "TOP") return ROLES.indexOf("top");
+  if (lane === "JUNGLE") return ROLES.indexOf("jungle");
+  if (lane === "MIDDLE" || lane === "MID") return ROLES.indexOf("mid");
+  if (lane === "BOTTOM" || lane === "BOT") {
+    return ROLES.indexOf(role === "SUPPORT" ? "support" : "bot");
+  }
+
+  // Nothing to go on: after everyone we could place.
+  return ROLES.length;
+}
+
 function byRole(a: MatchParticipant, b: MatchParticipant): number {
-  const rank = (role: Role | null) => (role === null ? ROLES.length : ROLES.indexOf(role));
-  return rank(a.role) - rank(b.role) || a.name.localeCompare(b.name);
+  return roleRank(a) - roleRank(b) || a.name.localeCompare(b.name);
 }
 
 /** Past games, newest first, each with both rosters. */
@@ -77,6 +107,8 @@ export async function listMatches(limit = 50): Promise<MatchSummary[]> {
       team: matchPlayers.team,
       role: matchPlayers.role,
       powerAtTime: matchPlayers.powerAtTime,
+      clientLane: matchPlayers.clientLane,
+      clientRole: matchPlayers.clientRole,
       playerId: players.id,
       name: players.name,
       riotId: matchPlayers.riotId,
@@ -122,6 +154,8 @@ export async function listMatches(limit = 50): Promise<MatchSummary[]> {
       unlinked: row.playerId === null,
       role: row.role,
       powerAtTime: row.powerAtTime,
+      clientLane: row.clientLane,
+      clientRole: row.clientRole,
       championId: row.championId,
       kills: row.kills,
       deaths: row.deaths,
