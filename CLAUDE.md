@@ -280,7 +280,7 @@ an error page.
 - Schema changes go through `db:generate` + `db:migrate` so the SQL is tracked
   in the repo. **Never** use `drizzle-kit push`.
 - Design: clean, simple **dark** theme that suits a gaming site, mobile-first.
-  Light mode is opt-in via the Splurre toggle in the header, which stamps
+  Light mode is opt-in via the Splurrp toggle in the header, which stamps
   `data-theme="light"` on `<html>`. Only the colour tokens in `globals.css`
   change, so new UI inherits both themes by using the tokens (`bg-panel`,
   `text-ink-dim`, …) rather than hard-coded colours.

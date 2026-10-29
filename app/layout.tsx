@@ -5,7 +5,7 @@ import { Suspense } from "react";
 
 import { SessionControls } from "@/components/session-controls";
 import { SiteNav } from "@/components/site-nav";
-import { themeScript } from "@/components/splurre-toggle";
+import { themeScript } from "@/components/splurrp-toggle";
 
 import "./globals.css";
 

@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-export const THEME_STORAGE_KEY = "splurre-theme";
+export const THEME_STORAGE_KEY = "splurrp-theme";
 
 /**
  * Runs before first paint so a stored light preference is applied without a
@@ -29,7 +29,7 @@ function isLight() {
   return document.documentElement.dataset.theme === "light";
 }
 
-export function SplurreToggle() {
+export function SplurrpToggle() {
   const light = useSyncExternalStore(subscribe, isLight, () => false);
 
   function toggle() {
@@ -50,11 +50,11 @@ export function SplurreToggle() {
       type="button"
       onClick={toggle}
       aria-pressed={light}
-      title="Splurre toggle"
+      title="Splurrp toggle"
       className="flex shrink-0 items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-sm font-medium whitespace-nowrap text-ink-dim transition-colors hover:border-gold/50 hover:text-ink"
     >
       {light ? <MoonIcon /> : <SunIcon />}
-      <span>Splurre toggle</span>
+      <span>Splurrp toggle</span>
     </button>
   );
 }

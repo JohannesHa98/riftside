@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
-import { SplurreToggle } from "./splurre-toggle";
+import { SplurrpToggle } from "./splurrp-toggle";
 
 // New game first: it is what the site is opened for.
 const LINKS = [
@@ -73,7 +73,7 @@ export function SiteNav({ sessionSlot }: { sessionSlot: ReactNode }) {
 
             {sessionSlot}
 
-            <SplurreToggle />
+            <SplurrpToggle />
           </div>
 
           {/* On a phone the links fold behind this, beside the logo. */}
@@ -114,7 +114,7 @@ export function SiteNav({ sessionSlot }: { sessionSlot: ReactNode }) {
 
           <div className="mt-2 flex items-center justify-center gap-2 border-t border-line pt-2">
             {sessionSlot}
-            <SplurreToggle />
+            <SplurrpToggle />
           </div>
         </div>
       </div>
