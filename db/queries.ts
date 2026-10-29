@@ -1,10 +1,11 @@
-import { asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
 
+import { windowStart } from "@/lib/login-throttle";
 import { assignRoles, roleOrder } from "@/lib/roles";
 import { type Role, type Team } from "@/lib/types";
 
 import { db } from "./index";
-import { matchBans, matchPlayers, matches, players } from "./schema";
+import { loginAttempts, matchBans, matchPlayers, matches, players } from "./schema";
 
 /** Everyone, active players first, strongest first within each group. */
 export async function listPlayers() {
@@ -1015,4 +1016,34 @@ export async function spotlight(): Promise<Spotlight> {
       ),
     average,
   };
+}
+
+/**
+ * How many times this address has guessed wrong inside the window.
+ *
+ * Old rows are dropped on the way past rather than by a scheduled job: the
+ * table only ever holds the last few minutes of failures, so there is nothing
+ * to tidy up later.
+ */
+export async function countRecentLoginFailures(addressKey: string): Promise<number> {
+  const since = windowStart();
+
+  const [row] = await db
+    .select({ failures: count() })
+    .from(loginAttempts)
+    .where(
+      and(eq(loginAttempts.addressKey, addressKey), gte(loginAttempts.attemptedAt, since)),
+    );
+
+  return row?.failures ?? 0;
+}
+
+export async function recordLoginFailure(addressKey: string): Promise<void> {
+  await db.insert(loginAttempts).values({ addressKey });
+  await db.delete(loginAttempts).where(lt(loginAttempts.attemptedAt, windowStart()));
+}
+
+/** Signing in clears the slate, so one good password undoes the lockout. */
+export async function clearLoginFailures(addressKey: string): Promise<void> {
+  await db.delete(loginAttempts).where(eq(loginAttempts.addressKey, addressKey));
 }

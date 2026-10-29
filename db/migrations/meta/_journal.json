@@ -50,6 +50,13 @@
       "when": 1793306452944,
       "tag": "0006_easy_longshot",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793315021692,
+      "tag": "0007_green_johnny_storm",
+      "breakpoints": true
     }
   ]
 }

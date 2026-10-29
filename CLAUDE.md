@@ -74,7 +74,14 @@ is public** — anyone can browse the roster, run the balancer and read history.
   reachable by direct POST, so hiding a button protects nothing. Adding a new
   action means adding a guard — `lib/auth.test.ts` covers forged, expired and
   `alg: none` tokens, but it cannot catch an unguarded action.
-- Rotating `AUTH_SECRET` invalidates every existing session.
+- Rotating `AUTH_SECRET` invalidates every existing session. It also salts the
+  hashed addresses in `login_attempts`, so rotating it clears every lockout.
+- **Failed sign-ins are counted in Postgres** (`login_attempts`, and
+  `lib/login-throttle.ts` for the policy). Not in memory: serverless instances
+  do not share one, and a cold start would reset it. `MAX_ATTEMPTS` failures
+  inside `ATTEMPT_WINDOW_MINUTES` locks an address out; a successful sign-in
+  deletes its rows, and old rows are dropped on the next failure rather than
+  by a scheduled job. Only the salted hash of an address is stored.
 - **Nothing links to `/login`.** There is one account, so a sign-in link would
   only advertise the way in. Go to `/login` directly. Signed out, the nav shows
   no auth control at all; signed in, it shows Sign out. The page is `noindex`.

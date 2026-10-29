@@ -9,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
@@ -197,6 +198,33 @@ export const matchBans = pgTable(
   },
   (table) => [
     uniqueIndex("match_bans_match_turn_unique").on(table.matchId, table.pickTurn),
+  ],
+);
+
+/**
+ * Failed sign-in attempts, so an address can be shut out after too many.
+ *
+ * It lives in the database rather than in memory because the site runs in
+ * serverless functions: an in-memory counter resets on a cold start and
+ * disagrees between instances, which makes it no limit at all. Successes are
+ * not recorded — signing in clears the address's rows — so the table stays
+ * near-empty and holds nothing about anyone who gets their password right.
+ */
+export const loginAttempts = pgTable(
+  "login_attempts",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+
+    /** sha256 of the address salted with AUTH_SECRET, never the address. */
+    addressKey: text("address_key").notNull(),
+
+    attemptedAt: timestamp("attempted_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // Every read is "this address, since this time".
+    index("login_attempts_address_time").on(table.addressKey, table.attemptedAt),
   ],
 );
 

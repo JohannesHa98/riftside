@@ -89,6 +89,13 @@ JWT in an HttpOnly SameSite=Lax cookie, and a guard inside every mutating
 server action — server actions are reachable by direct POST, so hiding a button
 protects nothing. The tests cover forged, expired and `alg: none` tokens.
 
+Wrong guesses are counted **in Postgres**, not in memory: the site runs in
+serverless functions, where an in-memory counter resets on a cold start and
+disagrees between instances, which makes it no limit at all. Eight failures
+from an address inside fifteen minutes shuts it out, and signing in clears the
+slate. Addresses are stored as a salted hash — the throttle needs to recognise
+a repeat visitor, not to know who they are.
+
 ## Stack
 
 - **Next.js 16** (App Router) + **React 19** + **TypeScript** in strict mode

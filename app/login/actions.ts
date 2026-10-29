@@ -1,14 +1,37 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import {
+  clearLoginFailures,
+  countRecentLoginFailures,
+  recordLoginFailure,
+} from "@/db/queries";
 import { signInWithPassword, signOut } from "@/lib/auth";
+import {
+  ATTEMPT_WINDOW_MINUTES,
+  addressKey,
+  clientAddress,
+  isLockedOut,
+} from "@/lib/login-throttle";
 
 export type LoginState = { error: string } | null;
 
 /** Slows down guessing without pretending to be real rate limiting. */
 const WRONG_PASSWORD_DELAY_MS = 500;
+
+/**
+ * Which address is guessing, hashed. Falls back to one shared bucket when
+ * there is no secret to salt with, which throttles harder rather than less.
+ */
+async function guesser(): Promise<string> {
+  const headerList = await headers();
+  const address = clientAddress(headerList.get("x-forwarded-for"));
+
+  return addressKey(address, process.env.AUTH_SECRET ?? "");
+}
 
 export async function signInAction(
   _previous: LoginState,
@@ -16,6 +39,16 @@ export async function signInAction(
 ): Promise<LoginState> {
   const password = String(formData.get("password") ?? "");
   if (password.length === 0) return { error: "Enter your password." };
+
+  const address = await guesser();
+
+  // Checked before the password is looked at, so a locked-out address cannot
+  // keep testing guesses and read the answer from how long the reply takes.
+  if (isLockedOut(await countRecentLoginFailures(address))) {
+    return {
+      error: `Too many wrong attempts. Try again in ${ATTEMPT_WINDOW_MINUTES} minutes.`,
+    };
+  }
 
   let signedIn = false;
 
@@ -29,9 +62,14 @@ export async function signInAction(
   }
 
   if (!signedIn) {
+    await recordLoginFailure(address);
     await new Promise((resolve) => setTimeout(resolve, WRONG_PASSWORD_DELAY_MS));
     return { error: "Wrong password." };
   }
+
+  // One right answer wipes the slate, so a lockout never outlives the person
+  // who actually knows the password.
+  await clearLoginFailures(address);
 
   revalidatePath("/", "layout");
   redirect("/players");
