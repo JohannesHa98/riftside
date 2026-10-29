@@ -244,6 +244,7 @@ function statsOf(entry: LinkedParticipant) {
     cs: participant.cs,
     gold: participant.gold,
     damage: participant.damage,
+    visionScore: participant.visionScore,
     clientLane: participant.clientLane,
     clientRole: participant.clientRole,
     roleQuestItem: participant.roleQuestItem,

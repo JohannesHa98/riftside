@@ -28,6 +28,8 @@ export interface IngestParticipant {
   cs: number;
   gold: number;
   damage: number;
+  /** Null when the companion sent none: a support's 0 CS is not 0 vision. */
+  visionScore: number | null;
   clientLane: string | null;
   clientRole: string | null;
   /** The role quest reward item, which says what the game made them. */
@@ -216,6 +218,7 @@ function parseParticipant(entry: unknown, index: number): ParticipantParse {
       cs: count(raw.cs),
       gold: count(raw.gold),
       damage: count(raw.damage),
+      visionScore: optionalCount(raw.visionScore),
       clientLane: optionalText(raw.clientLane),
       clientRole: optionalText(raw.clientRole),
       roleQuestItem: count(raw.roleQuestItem) || null,
@@ -285,6 +288,14 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 function count(value: unknown): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : 0;
+}
+
+/** Like `count`, but keeps the difference between zero and not reported. */
+function optionalCount(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return null;
+  }
+  return Math.round(value);
 }
 
 function optionalText(value: unknown): string | null {

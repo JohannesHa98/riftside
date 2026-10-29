@@ -1,6 +1,7 @@
 import { asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
 
-import { ROLES, type Role, type Team } from "@/lib/types";
+import { assignRoles, roleOrder } from "@/lib/roles";
+import { type Role, type Team } from "@/lib/types";
 
 import { db } from "./index";
 import { matchBans, matchPlayers, matches, players } from "./schema";
@@ -68,68 +69,21 @@ export interface MatchSummary {
 }
 
 /**
- * The role quest reward the game hands out, which says what it decided
- * someone was playing. Read off real games rather than documentation — see
- * `scripts/` and the archived payloads.
- */
-const ROLE_BY_QUEST_ITEM: Record<number, Role> = {
-  1221: "top",
-  1220: "top", // Unleashed Teleport, the other top reward
-  1209: "jungle",
-  1206: "mid",
-  1208: "support",
-};
-
-/**
- * Roles in the order of how much CS they usually finish on, used to place
- * anyone the quest item did not identify — in practice the bot lane and the
- * support, whose rewards are often sold or replaced by the end of a game.
- */
-const ROLES_BY_EXPECTED_CS: Role[] = ["bot", "top", "mid", "jungle", "support"];
-
-/**
  * Put a side in role order: top, jungle, mid, bot, support.
  *
- * The role quest reward decides it — that is the game itself saying which
- * role it assigned. It names top, jungle, mid and support; the two it does
- * not name are the bot lane and whoever sold their support reward, and CS
- * tells those apart with room to spare.
- *
- * The client's own lane is deliberately not used: it is derived from movement
- * and reports three junglers and no top in a real game of ours.
+ * `assignRoles` decides what each of them played; see `lib/roles.ts` for how,
+ * and why the client's own lane is not used.
  */
 function orderLineup(side: MatchParticipant[]): MatchParticipant[] {
-  const taken = new Set<Role>();
-  const undecided: MatchParticipant[] = [];
+  const roles = assignRoles(side);
+  side.forEach((participant, index) => {
+    participant.position = roles[index];
+  });
 
-  for (const participant of side) {
-    const known =
-      participant.roleQuestItem === null
-        ? undefined
-        : ROLE_BY_QUEST_ITEM[participant.roleQuestItem];
-
-    if (known !== undefined && !taken.has(known)) {
-      participant.position = known;
-      taken.add(known);
-    } else {
-      undecided.push(participant);
-    }
-  }
-
-  const spare = ROLES_BY_EXPECTED_CS.filter((role) => !taken.has(role));
-  undecided
-    .sort((a, b) => (b.cs ?? 0) - (a.cs ?? 0))
-    .forEach((participant, index) => {
-      participant.position = spare[index] ?? null;
-    });
-
-  return [...side].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
-}
-
-function rank(participant: MatchParticipant): number {
-  return participant.position === null
-    ? ROLES.length
-    : ROLES.indexOf(participant.position);
+  return [...side].sort(
+    (a, b) =>
+      roleOrder(a.position) - roleOrder(b.position) || a.name.localeCompare(b.name),
+  );
 }
 
 /** Past games, newest first, each with both rosters. */

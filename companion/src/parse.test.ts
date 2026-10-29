@@ -173,7 +173,19 @@ describe("parseGame", () => {
       expect(participant.assists).toBeGreaterThanOrEqual(0);
       expect(participant.gold).toBeGreaterThan(0);
       expect(participant.damage).toBeGreaterThan(0);
+      expect(participant.visionScore).toBeGreaterThan(0);
     }
+  });
+
+  it("reads vision score, which is what a support is judged on", () => {
+    const first = (customGame as { participants: Array<{ stats: Record<string, number> }> })
+      .participants[0];
+
+    expect(parsed.participants[0].visionScore).toBe(first.stats.visionScore);
+    // The support warded several times what the top laner did; a vision score
+    // that is the same for everyone means the wrong field is being read.
+    const scores = parsed.participants.map((p) => p.visionScore ?? 0);
+    expect(Math.max(...scores)).toBeGreaterThan(Math.min(...scores) * 2);
   });
 
   it("keeps the client's lane guess without treating it as a role", () => {

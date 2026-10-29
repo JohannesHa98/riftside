@@ -66,6 +66,7 @@ function companionPayload(): Record<string, unknown> {
           participant.stats.neutralMinionsKilled,
         gold: participant.stats.goldEarned,
         damage: participant.stats.totalDamageDealtToChampions,
+        visionScore: participant.stats.visionScore,
         clientLane: participant.timeline.lane ?? null,
         clientRole: participant.timeline.role ?? null,
       };
@@ -84,6 +85,27 @@ describe("parseIngestPayload", () => {
     expect(result.game.participants).toHaveLength(10);
     expect(result.game.durationSeconds).toBe(1958);
     expect(result.game.winner).toBe("blue");
+  });
+
+  it("keeps vision score, and tells a missing one from a zero", () => {
+    const payload = companionPayload();
+    const result = parseIngestPayload(payload);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.game.participants[0].visionScore).toBeGreaterThan(0);
+    }
+
+    const participants = payload.participants as Array<{ visionScore: unknown }>;
+    participants[0] = { ...participants[0], visionScore: 0 };
+    participants[1] = { ...participants[1], visionScore: undefined };
+
+    const second = parseIngestPayload(payload);
+    expect(second.ok).toBe(true);
+    if (second.ok) {
+      expect(second.game.participants[0].visionScore).toBe(0);
+      expect(second.game.participants[1].visionScore).toBeNull();
+    }
   });
 
   it("rejects a body that is not an object", () => {
@@ -185,6 +207,7 @@ describe("linkParticipants", () => {
       cs: 0,
       gold: 0,
       damage: 0,
+      visionScore: null,
       clientLane: null,
       clientRole: null,
       roleQuestItem: null,

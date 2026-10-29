@@ -33,6 +33,11 @@ export interface ParticipantPayload {
   gold: number;
   damage: number;
   /**
+   * The game's own vision score. Null if the client did not report one — the
+   * website keeps CS and vision apart, so a missing one must not read as 0.
+   */
+  visionScore: number | null;
+  /**
    * The client's *guess* at where someone played, not a fact. It is derived
    * from movement and is reliably wrong in custom games — a real in-house
    * game came back with two junglers, two mids and no top. Stored as-is and
@@ -296,6 +301,8 @@ function parseParticipants(
       cs: count(stats.totalMinionsKilled) + count(stats.neutralMinionsKilled),
       gold: count(stats.goldEarned),
       damage: count(stats.totalDamageDealtToChampions),
+      visionScore:
+        typeof stats.visionScore === "number" ? stats.visionScore : null,
       clientLane: optionalText(timeline.lane),
       clientRole: optionalText(timeline.role),
       roleQuestItem:

@@ -144,6 +144,13 @@ export const matchPlayers = pgTable(
     damage: integer(),
 
     /**
+     * The game's own vision score. Stored because CS says nothing about a
+     * support: it is what the spotlight shows instead of farming for someone
+     * who mostly supports.
+     */
+    visionScore: integer("vision_score"),
+
+    /**
      * What the client guessed someone played. Not a role: it is derived from
      * movement and is wrong often enough in customs that it is recorded and
      * not relied on.

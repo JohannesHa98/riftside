@@ -43,6 +43,13 @@
       "when": 1793287986895,
       "tag": "0005_role_quest_item",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793306452944,
+      "tag": "0006_easy_longshot",
+      "breakpoints": true
     }
   ]
 }
