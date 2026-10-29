@@ -107,7 +107,7 @@ query.
 
 ```bash
 npm install
-cp .env.example .env.local     # fill in the four values below
+cp .env.example .env.local     # fill in the values below
 npm run db:migrate
 npm run dev
 ```
@@ -180,13 +180,6 @@ The judgement calls stayed mine — what to build, what to cut, what the rules
 of the domain actually are. Removing the hand-entry feature and taking roles
 from the role quest instead came from knowing how the game works, not from the
 code.
-
-## Not built yet
-
-- Elo-style automatic power adjustment from results. The schema already stores
-  `power_at_time` per participant and archives every payload, so the history
-  needed to replay it exists.
-- Linking a participant who was not on the roster to a player after the fact.
 
 ---
 
