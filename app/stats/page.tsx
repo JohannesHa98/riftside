@@ -32,13 +32,13 @@ export default function StatsPage() {
         <Table />
       </Suspense>
 
-      {/* Its own boundary, so the ladder is not held up by the extras. */}
+      {/* Each has its own boundary, so neither holds up the ladder. */}
       <Suspense fallback={null}>
-        <OddsAndEnds />
+        <Spotlight />
       </Suspense>
 
       <Suspense fallback={null}>
-        <Spotlight />
+        <OddsAndEnds />
       </Suspense>
     </div>
   );
