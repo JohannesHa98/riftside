@@ -123,10 +123,19 @@ the roster is still stored, with their Riot identity, and shown as unlinked.
 That is why the table has a surrogate `id` and a partial unique index rather
 than a composite primary key. `power_at_time` is nullable for the same reason.
 
-**Line-ups are ordered by `role_quest_item`**, the reward the game hands out
-by lane: 1221 and 1220 top, 1209 jungle, 1206 mid, 1208 support. That is the
-game saying which role it assigned. The two it does not name are the bot lane
-and whoever sold their support reward, and CS separates those.
+**Roles come from `role_quest_item`**, the reward the game hands out by lane:
+1221 and 1220 top, 1209 jungle, 1206 mid, 1208 support. That is the game
+saying which role it assigned. The two it does not name are the bot lane and
+whoever sold their support reward, and CS separates those. The rule lives in
+`lib/roles.ts` (`assignRoles`) and takes a whole side at once, so anything
+needing it has to load every participant of a game, linked or not.
+
+**CS never counts a game played on support.** A support finishes on a fraction
+of a laner's CS by design, so including those games would say nothing about
+farming and would punish whoever filled. This applies to the Best farmer card
+and to the spotlight's farming axis. For the same reason the spotlight shows
+**vision instead of farming** to anyone with more support games than other
+games — `vision_score` is stored per participant for exactly that.
 
 `client_lane` / `client_role` are the client's own guess and are **not** used
 for this. They are derived from movement and a real in-house game of ours came

@@ -67,7 +67,7 @@ export async function OddsAndEnds() {
           <Leaders players={fun.leaders.assists} unit="assists" />
         </Card>
 
-        <Card title="Best farmer" note="CS per minute">
+        <Card title="Best farmer" note="CS per minute, support games aside">
           <Leaders players={fun.leaders.csPerMinute} unit="cs/min" />
         </Card>
 

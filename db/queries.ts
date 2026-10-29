@@ -382,10 +382,11 @@ const LEADERBOARD_SIZE = 5;
  * computed in memory like the rest: the whole table is a few hundred rows.
  */
 export async function funStats(): Promise<FunStats> {
-  const [bans, rows, played] = await Promise.all([
+  const [bans, tracked, played, everyone] = await Promise.all([
     db.select({ championId: matchBans.championId }).from(matchBans),
     db
       .select({
+        id: matchPlayers.id,
         matchId: matchPlayers.matchId,
         name: players.name,
         riotId: players.riotId,
@@ -409,7 +410,14 @@ export async function funStats(): Promise<FunStats> {
         durationSeconds: matches.durationSeconds,
       })
       .from(matches),
+    roleClues(),
   ]);
+
+  const roles = rolesByParticipant(everyone);
+  const rows: StatRow[] = tracked.map((row) => ({
+    ...row,
+    role: roles.get(row.id) ?? null,
+  }));
 
   // Riot records -1 for a turn where nobody banned.
   const banCounts = tally(
@@ -467,6 +475,7 @@ function tally(ids: number[]): ChampionTally[] {
 }
 
 interface StatRow {
+  id: number;
   matchId: number;
   name: string;
   riotId: string | null;
@@ -480,6 +489,50 @@ interface StatRow {
   playedAt: Date;
   winner: Team | null;
   durationSeconds: number | null;
+  /** What they played, worked out by `lib/roles.ts`. */
+  role: Role | null;
+}
+
+/**
+ * Every participant of every game with what the role rule needs, linked to
+ * one of our players or not: a role only falls out of a whole side at once.
+ */
+function roleClues() {
+  return db
+    .select({
+      id: matchPlayers.id,
+      matchId: matchPlayers.matchId,
+      team: matchPlayers.team,
+      roleQuestItem: matchPlayers.roleQuestItem,
+      cs: matchPlayers.cs,
+    })
+    .from(matchPlayers);
+}
+
+interface RoleClueRow {
+  id: number;
+  matchId: number;
+  team: Team;
+  roleQuestItem: number | null;
+  cs: number | null;
+}
+
+/** The role each participant played, by participant row id. */
+function rolesByParticipant(rows: RoleClueRow[]): Map<number, Role | null> {
+  const sides = new Map<string, RoleClueRow[]>();
+  for (const row of rows) {
+    const key = `${row.matchId}:${row.team}`;
+    const side = sides.get(key);
+    if (side === undefined) sides.set(key, [row]);
+    else side.push(row);
+  }
+
+  const roles = new Map<number, Role | null>();
+  for (const side of sides.values()) {
+    assignRoles(side).forEach((role, index) => roles.set(side[index].id, role));
+  }
+
+  return roles;
 }
 
 /** Average per game, highest first, for anyone past the game minimum. */
@@ -521,6 +574,10 @@ function perGameLeaders(
 /**
  * Total CS over total minutes, rather than averaging each game's rate: a
  * short game should not count as much as a long one.
+ *
+ * Games played on support are left out entirely. A support finishes on a
+ * fraction of a laner's CS by design, so counting those games would say
+ * nothing about farming and would quietly punish whoever filled support.
  */
 function csPerMinuteLeaders(rows: StatRow[]): PlayerAverage[] {
   const totals = new Map<
@@ -532,6 +589,7 @@ function csPerMinuteLeaders(rows: StatRow[]): PlayerAverage[] {
     if (row.cs === null || row.durationSeconds === null || row.durationSeconds <= 0) {
       continue;
     }
+    if (row.role === "support") continue;
 
     const entry = totals.get(row.name) ?? {
       riotId: row.riotId,
@@ -603,6 +661,15 @@ export const SPOTLIGHT_AXES: SpotlightAxis[] = [
   { key: "winRate", label: "Win rate" },
 ];
 
+const FARMING_AXIS = SPOTLIGHT_AXES.findIndex((axis) => axis.key === "farming");
+
+/**
+ * What someone who mostly supports gets in place of farming. A support's CS
+ * is not a measure of anything; vision is what they are actually playing for,
+ * so the slot shows that instead.
+ */
+const VISION_AXIS: SpotlightAxis = { key: "vision", label: "Vision" };
+
 export interface GameHighlight {
   kills: number;
   deaths: number;
@@ -647,7 +714,12 @@ export interface PlayerProfile {
    * games. Null when none of their games carry stats.
    */
   killParticipation: number | null;
-  /** Raw value per axis, in SPOTLIGHT_AXES order. */
+  /**
+   * The axes this player's shape is drawn on - `SPOTLIGHT_AXES`, except that
+   * someone who supports more often than not has farming replaced by vision.
+   */
+  axes: SpotlightAxis[];
+  /** Raw value per axis, in `axes` order. */
   raw: number[];
   /** The same values on 0-1, scaled against everyone else. */
   radar: number[];
@@ -668,6 +740,7 @@ export async function spotlight(): Promise<Spotlight> {
   const [rows, ladder, sides] = await Promise.all([
     db
       .select({
+        id: matchPlayers.id,
         playerId: matchPlayers.playerId,
         matchId: matchPlayers.matchId,
         name: players.name,
@@ -682,21 +755,28 @@ export async function spotlight(): Promise<Spotlight> {
         assists: matchPlayers.assists,
         cs: matchPlayers.cs,
         damage: matchPlayers.damage,
+        visionScore: matchPlayers.visionScore,
       })
       .from(matchPlayers)
       .innerJoin(players, eq(players.id, matchPlayers.playerId))
       .innerJoin(matches, eq(matches.id, matchPlayers.matchId)),
     playerStats(),
     // Every participant, linked or not, so a team's kills are not
-    // undercounted by someone who is not on the roster.
+    // undercounted by someone who is not on the roster - and so a role can be
+    // worked out, which takes a whole side at once.
     db
       .select({
+        id: matchPlayers.id,
         matchId: matchPlayers.matchId,
         team: matchPlayers.team,
         kills: matchPlayers.kills,
+        roleQuestItem: matchPlayers.roleQuestItem,
+        cs: matchPlayers.cs,
       })
       .from(matchPlayers),
   ]);
+
+  const roles = rolesByParticipant(sides);
 
   const teamKills = new Map<string, number>();
   for (const row of sides) {
@@ -714,6 +794,11 @@ export async function spotlight(): Promise<Spotlight> {
     profile: PlayerProfile;
     minutes: number;
     cs: number;
+    /** Minutes played off support: the only ones CS is counted over. */
+    farmMinutes: number;
+    vision: number;
+    visionMinutes: number;
+    supportGames: number;
     damage: number;
     tracked: number;
     /** Summed per game, so one lopsided game cannot dominate the average. */
@@ -747,11 +832,16 @@ export async function spotlight(): Promise<Spotlight> {
           best: null,
           worst: null,
           killParticipation: null,
+          axes: SPOTLIGHT_AXES,
           raw: [],
           radar: [],
         },
         minutes: 0,
         cs: 0,
+        farmMinutes: 0,
+        vision: 0,
+        visionMinutes: 0,
+        supportGames: 0,
         damage: 0,
         tracked: 0,
         shareTotal: 0,
@@ -773,9 +863,24 @@ export async function spotlight(): Promise<Spotlight> {
       p.kills += row.kills;
       p.deaths += row.deaths ?? 0;
       p.assists += row.assists ?? 0;
-      entry.cs += row.cs ?? 0;
       entry.damage += row.damage ?? 0;
-      entry.minutes += (row.durationSeconds ?? 0) / 60;
+
+      const minutes = (row.durationSeconds ?? 0) / 60;
+      entry.minutes += minutes;
+
+      // CS is only counted off support. A support is not farming, so those
+      // games would drag the number down without saying anything about it.
+      if (roles.get(row.id) === "support") {
+        entry.supportGames += 1;
+      } else {
+        entry.cs += row.cs ?? 0;
+        entry.farmMinutes += minutes;
+      }
+
+      if (row.visionScore !== null) {
+        entry.vision += row.visionScore;
+        entry.visionMinutes += minutes;
+      }
 
       const game: GameHighlight = {
         kills: row.kills,
@@ -819,11 +924,27 @@ export async function spotlight(): Promise<Spotlight> {
       .map(([championId, games]) => ({ championId, games }))
       .sort((a, b) => b.games - a.games || a.championId - b.championId);
 
+    // More games on support than off it, and vision to show for them: the
+    // farming slot becomes a vision slot, for this player alone.
+    const supports =
+      totals.supportGames * 2 > totals.tracked && totals.visionMinutes > 0;
+
+    if (supports) {
+      profile.axes = SPOTLIGHT_AXES.map((axis, index) =>
+        index === FARMING_AXIS ? VISION_AXIS : axis,
+      );
+    }
+
+    const rate = (total: number, minutes: number) =>
+      minutes === 0 ? 0 : total / minutes;
+
     profile.raw = [
       per(profile.kills),
       per(profile.assists),
       per(profile.deaths),
-      perMinute(totals.cs),
+      supports
+        ? rate(totals.vision, totals.visionMinutes)
+        : rate(totals.cs, totals.farmMinutes),
       perMinute(totals.damage),
       profile.decided === 0 ? 0 : profile.wins / profile.decided,
     ];
@@ -836,26 +957,51 @@ export async function spotlight(): Promise<Spotlight> {
   const scalers = profiles.filter((entry) => entry.tracked >= MIN_RANKED_GAMES);
   const basis = scalers.length > 0 ? scalers : profiles;
 
+  // Ranges are kept per axis *key*, not merely per slot, so the supports
+  // sharing the vision slot are scaled against each other's vision and never
+  // against the laners' CS sitting in the same corner of the chart.
   const ranges = SPOTLIGHT_AXES.map((_, axis) => {
-    const values = basis.map((entry) => entry.profile.raw[axis]);
-    return { low: Math.min(...values), high: Math.max(...values) };
+    const byKey = new Map<string, { low: number; high: number }>();
+
+    for (const entry of basis) {
+      const key = entry.profile.axes[axis].key;
+      const value = entry.profile.raw[axis];
+      const range = byKey.get(key);
+
+      byKey.set(
+        key,
+        range === undefined
+          ? { low: value, high: value }
+          : {
+              low: Math.min(range.low, value),
+              high: Math.max(range.high, value),
+            },
+      );
+    }
+
+    return byKey;
   });
 
-  const scale = (value: number, axis: number): number => {
-    const { low, high } = ranges[axis];
-    if (high === low) return 0.5;
-    const scaled = (value - low) / (high - low);
+  const scale = (profile: PlayerProfile, axis: number): number => {
+    const key = profile.axes[axis].key;
+    const range = ranges[axis].get(key);
+    // Nobody with enough games shares this measure, so there is nothing to be
+    // read against: sit the point on the middle ring rather than invent a
+    // position for it.
+    if (range === undefined || range.high === range.low) return 0.5;
+
+    const scaled = (profile.raw[axis] - range.low) / (range.high - range.low);
     // Deaths read the other way round: fewer is better.
-    const oriented = SPOTLIGHT_AXES[axis].key === "survival" ? 1 - scaled : scaled;
+    const oriented = key === "survival" ? 1 - scaled : scaled;
     return Math.min(1, Math.max(0, oriented));
   };
 
   for (const { profile } of profiles) {
-    profile.radar = profile.raw.map(scale);
+    profile.radar = profile.axes.map((_, axis) => scale(profile, axis));
   }
 
   const average = SPOTLIGHT_AXES.map((_, axis) => {
-    const values = basis.map((entry) => scale(entry.profile.raw[axis], axis));
+    const values = basis.map((entry) => scale(entry.profile, axis));
     return values.reduce((sum, value) => sum + value, 0) / values.length;
   });
 

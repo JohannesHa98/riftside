@@ -6,7 +6,6 @@ import { PlayerName } from "@/components/player-name";
 import { EmptyState, PageHeader } from "@/components/ui";
 import {
   MIN_RANKED_GAMES,
-  SPOTLIGHT_AXES,
   countMatchesWithoutWinner,
   isRanked,
   kdaRatio,
@@ -123,7 +122,6 @@ async function Spotlight() {
     <PlayerSpotlight
       players={data.players}
       average={data.average}
-      axes={SPOTLIGHT_AXES}
       champions={champions}
     />
   );

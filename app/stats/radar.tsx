@@ -7,6 +7,8 @@ export function formatAxis(key: string, value: number): string {
       return `${value.toFixed(1)} deaths`;
     case "farming":
       return `${value.toFixed(1)} cs/min`;
+    case "vision":
+      return `${value.toFixed(1)} vis/min`;
     case "damage":
       return `${Math.round(value)}/min`;
     case "winRate":

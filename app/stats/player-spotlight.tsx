@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { PlayerName } from "@/components/player-name";
 import { inputStyles } from "@/components/ui";
-import type { GameHighlight, PlayerProfile, SpotlightAxis } from "@/db/queries";
+import type { GameHighlight, PlayerProfile } from "@/db/queries";
 
 import { Radar, RadarLegend } from "./radar";
 
@@ -22,12 +22,10 @@ const CHAMPIONS_SHOWN = 10;
 export function PlayerSpotlight({
   players,
   average,
-  axes,
   champions,
 }: {
   players: PlayerProfile[];
   average: number[];
-  axes: SpotlightAxis[];
   champions: Record<number, string>;
 }) {
   // Already sorted by ladder position, so the first is the player on top.
@@ -126,7 +124,11 @@ export function PlayerSpotlight({
 
         <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
           <div>
-            <Radar player={player} average={average} axes={axes} />
+            {/*
+              The axes come from the player, not the page: someone who mostly
+              supports has vision in place of farming.
+            */}
+            <Radar player={player} average={average} axes={player.axes} />
             <div className="mt-3">
               <RadarLegend name={player.name} />
             </div>
