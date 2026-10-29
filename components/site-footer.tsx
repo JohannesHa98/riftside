@@ -8,7 +8,8 @@ export function SiteFooter() {
     <footer className="mt-12 border-t border-line">
       <div className="mx-auto w-full max-w-5xl space-y-2 px-4 py-6 sm:px-6">
         <p className="text-sm font-semibold tracking-tight">
-          <span className="text-gold">Rift</span>side
+          <span className="text-blue-side">Rift</span>
+          <span className="text-red-side">side</span>
         </p>
 
         <p className="text-xs text-ink-dim">

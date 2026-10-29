@@ -44,7 +44,8 @@ export function SiteNav({ sessionSlot }: { sessionSlot: ReactNode }) {
             onClick={() => setMenuOpen(false)}
             className="text-lg font-semibold tracking-tight"
           >
-            <span className="text-gold">Rift</span>side
+            <span className="text-blue-side">Rift</span>
+            <span className="text-red-side">side</span>
           </Link>
 
           {/* Everything on one row from small screens up. */}
