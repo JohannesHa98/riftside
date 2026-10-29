@@ -20,6 +20,17 @@
   --color-okay: #94a3b8;
   --color-bad: #f87171;
 
+  /*
+   * Chart colours. The accent is the gold above; the context is the group
+   * average a player is read against, so it is a de-emphasis grey rather than
+   * a second category.
+   *
+   * Checked with the palette validator rather than by eye: against the dark
+   * surface this pair separates by dE 25.6 for normal vision and 23.3 under
+   * protanopia, and both clear 3:1 contrast.
+   */
+  --color-chart-context: #5f6b7e;
+
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -71,6 +82,14 @@ html {
   --color-good: #157f3d;
   --color-okay: #64748b;
   --color-bad: #bd2f2a;
+
+  /*
+   * dE 20.8 normal and 20.1 deutan against the light gold. Its contrast with
+   * the light surface is 2.48, under the 3:1 bar — which the validator allows
+   * only if the chart carries visible labels, so every radar axis is labelled
+   * with its own value rather than relying on the shape alone.
+   */
+  --color-chart-context: #98a3b5;
 
   color-scheme: light;
 }

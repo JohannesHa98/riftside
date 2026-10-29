@@ -6,16 +6,19 @@ import { PlayerName } from "@/components/player-name";
 import { EmptyState, PageHeader } from "@/components/ui";
 import {
   MIN_RANKED_GAMES,
+  SPOTLIGHT_AXES,
   countMatchesWithoutWinner,
   isRanked,
   kdaRatio,
   playerStats,
+  spotlight,
   winRate,
   type PlayerStats,
 } from "@/db/queries";
 import { championIconUrl, championLabel, championNames } from "@/lib/champions";
 
 import { OddsAndEnds } from "./odds-and-ends";
+import { PlayerSpotlight } from "./player-spotlight";
 
 export default function StatsPage() {
   return (
@@ -32,6 +35,10 @@ export default function StatsPage() {
       {/* Its own boundary, so the ladder is not held up by the extras. */}
       <Suspense fallback={null}>
         <OddsAndEnds />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <Spotlight />
       </Suspense>
     </div>
   );
@@ -102,6 +109,24 @@ function withRanks(stats: PlayerStats[]): Array<{
     player,
     rank: isRanked(player) ? ++position : null,
   }));
+}
+
+async function Spotlight() {
+  const [data, names] = await Promise.all([spotlight(), championNames()]);
+
+  if (data.players.length === 0) return null;
+
+  // A Map does not survive the trip to a client component; an object does.
+  const champions = Object.fromEntries(names);
+
+  return (
+    <PlayerSpotlight
+      players={data.players}
+      average={data.average}
+      axes={SPOTLIGHT_AXES}
+      champions={champions}
+    />
+  );
 }
 
 /** How many champions each player's row shows. */

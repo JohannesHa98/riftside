@@ -613,3 +613,239 @@ function bestBy(
 
   return best;
 }
+
+/**
+ * Plain data, no functions: these cross from the server to the client
+ * component that draws them, and a function would not survive the trip.
+ * Formatting lives with the chart.
+ */
+export interface SpotlightAxis {
+  key: string;
+  label: string;
+}
+
+/**
+ * The radar's axes. Six is about the limit before the shape stops reading;
+ * each is something a player visibly does in a game.
+ */
+export const SPOTLIGHT_AXES: SpotlightAxis[] = [
+  { key: "kills", label: "Kills" },
+  { key: "assists", label: "Assists" },
+  { key: "survival", label: "Survival" },
+  { key: "farming", label: "Farming" },
+  { key: "damage", label: "Damage" },
+  { key: "winRate", label: "Win rate" },
+];
+
+export interface PlayerProfile {
+  playerId: number;
+  name: string;
+  riotId: string | null;
+  power: number;
+  /** Ladder position, or null when they have too few games to rank. */
+  rank: number | null;
+  games: number;
+  decided: number;
+  wins: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  kda: number | null;
+  champions: ChampionTally[];
+  /** Their best game by kills, for a bit of colour. */
+  best: {
+    kills: number;
+    deaths: number;
+    assists: number;
+    championId: number | null;
+  } | null;
+  /** Raw value per axis, in SPOTLIGHT_AXES order. */
+  raw: number[];
+  /** The same values on 0-1, scaled against everyone else. */
+  radar: number[];
+}
+
+export interface Spotlight {
+  players: PlayerProfile[];
+  /** The group's shape, for the player to be read against. */
+  average: number[];
+}
+
+/**
+ * Per-player profiles for the spotlight, with each axis scaled against the
+ * rest of the group so a shape means "compared to us" rather than compared to
+ * some absolute nobody here would recognise.
+ */
+export async function spotlight(): Promise<Spotlight> {
+  const [rows, ladder] = await Promise.all([
+    db
+      .select({
+        playerId: matchPlayers.playerId,
+        name: players.name,
+        riotId: players.riotId,
+        power: players.power,
+        team: matchPlayers.team,
+        winner: matches.winner,
+        durationSeconds: matches.durationSeconds,
+        championId: matchPlayers.championId,
+        kills: matchPlayers.kills,
+        deaths: matchPlayers.deaths,
+        assists: matchPlayers.assists,
+        cs: matchPlayers.cs,
+        damage: matchPlayers.damage,
+      })
+      .from(matchPlayers)
+      .innerJoin(players, eq(players.id, matchPlayers.playerId))
+      .innerJoin(matches, eq(matches.id, matchPlayers.matchId)),
+    playerStats(),
+  ]);
+
+  const rankByPlayer = new Map<number, number>();
+  let position = 0;
+  for (const entry of ladder) {
+    if (isRanked(entry)) rankByPlayer.set(entry.playerId, ++position);
+  }
+
+  interface Running {
+    profile: PlayerProfile;
+    minutes: number;
+    cs: number;
+    damage: number;
+    tracked: number;
+    champions: Map<number, number>;
+  }
+
+  const running = new Map<number, Running>();
+
+  for (const row of rows) {
+    if (row.playerId === null) continue;
+
+    let entry = running.get(row.playerId);
+    if (entry === undefined) {
+      entry = {
+        profile: {
+          playerId: row.playerId,
+          name: row.name,
+          riotId: row.riotId,
+          power: row.power,
+          rank: rankByPlayer.get(row.playerId) ?? null,
+          games: 0,
+          decided: 0,
+          wins: 0,
+          kills: 0,
+          deaths: 0,
+          assists: 0,
+          kda: null,
+          champions: [],
+          best: null,
+          raw: [],
+          radar: [],
+        },
+        minutes: 0,
+        cs: 0,
+        damage: 0,
+        tracked: 0,
+        champions: new Map(),
+      };
+      running.set(row.playerId, entry);
+    }
+
+    const p = entry.profile;
+    p.games += 1;
+    if (row.winner !== null) {
+      p.decided += 1;
+      if (row.winner === row.team) p.wins += 1;
+    }
+
+    if (row.kills !== null) {
+      entry.tracked += 1;
+      p.kills += row.kills;
+      p.deaths += row.deaths ?? 0;
+      p.assists += row.assists ?? 0;
+      entry.cs += row.cs ?? 0;
+      entry.damage += row.damage ?? 0;
+      entry.minutes += (row.durationSeconds ?? 0) / 60;
+
+      if (p.best === null || row.kills > p.best.kills) {
+        p.best = {
+          kills: row.kills,
+          deaths: row.deaths ?? 0,
+          assists: row.assists ?? 0,
+          championId: row.championId,
+        };
+      }
+    }
+
+    if (row.championId !== null && row.championId > 0) {
+      entry.champions.set(
+        row.championId,
+        (entry.champions.get(row.championId) ?? 0) + 1,
+      );
+    }
+  }
+
+  const profiles = [...running.values()].map(({ profile, ...totals }) => {
+    const per = (total: number) => (totals.tracked === 0 ? 0 : total / totals.tracked);
+    const perMinute = (total: number) =>
+      totals.minutes === 0 ? 0 : total / totals.minutes;
+
+    profile.kda =
+      totals.tracked === 0
+        ? null
+        : (profile.kills + profile.assists) / Math.max(profile.deaths, 1);
+
+    profile.champions = [...totals.champions]
+      .map(([championId, games]) => ({ championId, games }))
+      .sort((a, b) => b.games - a.games || a.championId - b.championId);
+
+    profile.raw = [
+      per(profile.kills),
+      per(profile.assists),
+      per(profile.deaths),
+      perMinute(totals.cs),
+      perMinute(totals.damage),
+      profile.decided === 0 ? 0 : profile.wins / profile.decided,
+    ];
+
+    return { profile, tracked: totals.tracked };
+  });
+
+  // Scale against players with enough games, so one stray result cannot
+  // stretch an axis and flatten everyone else against it.
+  const scalers = profiles.filter((entry) => entry.tracked >= MIN_RANKED_GAMES);
+  const basis = scalers.length > 0 ? scalers : profiles;
+
+  const ranges = SPOTLIGHT_AXES.map((_, axis) => {
+    const values = basis.map((entry) => entry.profile.raw[axis]);
+    return { low: Math.min(...values), high: Math.max(...values) };
+  });
+
+  const scale = (value: number, axis: number): number => {
+    const { low, high } = ranges[axis];
+    if (high === low) return 0.5;
+    const scaled = (value - low) / (high - low);
+    // Deaths read the other way round: fewer is better.
+    const oriented = SPOTLIGHT_AXES[axis].key === "survival" ? 1 - scaled : scaled;
+    return Math.min(1, Math.max(0, oriented));
+  };
+
+  for (const { profile } of profiles) {
+    profile.radar = profile.raw.map(scale);
+  }
+
+  const average = SPOTLIGHT_AXES.map((_, axis) => {
+    const values = basis.map((entry) => scale(entry.profile.raw[axis], axis));
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+  });
+
+  return {
+    players: profiles
+      .map((entry) => entry.profile)
+      .sort(
+        (a, b) =>
+          (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER) ||
+          a.name.localeCompare(b.name),
+      ),
+    average,
+  };
+}
