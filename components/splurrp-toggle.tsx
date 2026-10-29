@@ -50,11 +50,11 @@ export function SplurrpToggle() {
       type="button"
       onClick={toggle}
       aria-pressed={light}
-      title="Splurrp toggle"
+      title="Splurrp mode"
       className="flex shrink-0 items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-sm font-medium whitespace-nowrap text-ink-dim transition-colors hover:border-gold/50 hover:text-ink"
     >
       {light ? <MoonIcon /> : <SunIcon />}
-      <span>Splurrp toggle</span>
+      <span>Splurrp mode</span>
     </button>
   );
 }
