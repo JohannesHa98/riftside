@@ -302,6 +302,10 @@ an error page.
   `data-theme="light"` on `<html>`. Only the colour tokens in `globals.css`
   change, so new UI inherits both themes by using the tokens (`bg-panel`,
   `text-ink-dim`, …) rather than hard-coded colours.
+- **Documentation is part of the change, not a follow-up.** A change that makes
+  `README.md`, `CLAUDE.md` or `companion/README.md` wrong is not finished until
+  they are right. The README is read by people deciding whether the project is
+  worth their time, so an out-of-date one costs more than a missing one.
 - Build in small steps. `npm run build` must pass before each commit.
 - Commit after each working step with a clear message. **Ask before pushing.**
 
