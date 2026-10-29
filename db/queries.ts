@@ -328,21 +328,26 @@ export async function playerStats(): Promise<PlayerStats[]> {
 
   // A ladder: ranked players by win rate, then everyone still short of the
   // minimum, closest to qualifying first.
+  //
+  // Win rate, then who held it over more games, then KDA. Two players on the
+  // same record over the same number of games are genuinely level on the
+  // thing the ladder measures, so the tiebreak asks how they got there rather
+  // than falling back on the alphabet.
+  const byMerit = (a: PlayerStats, b: PlayerStats) =>
+    (kdaRatio(b) ?? 0) - (kdaRatio(a) ?? 0) || a.name.localeCompare(b.name);
+
   return [...byPlayer.values()].sort((a, b) => {
     const rankedA = isRanked(a);
     const rankedB = isRanked(b);
 
     if (rankedA !== rankedB) return rankedA ? -1 : 1;
 
-    if (!rankedA) {
-      return b.decided - a.decided || a.name.localeCompare(b.name);
-    }
+    if (!rankedA) return b.decided - a.decided || byMerit(a, b);
 
-    // Same rate: the one who held it over more games ranks above.
     return (
       (winRate(b) ?? 0) - (winRate(a) ?? 0) ||
       b.decided - a.decided ||
-      a.name.localeCompare(b.name)
+      byMerit(a, b)
     );
   });
 }
