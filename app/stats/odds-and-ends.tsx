@@ -105,6 +105,12 @@ export async function OddsAndEnds() {
                 </span>
               </li>
               <li className="flex items-baseline gap-2">
+                <span className="mr-auto text-ink-dim">Average</span>
+                <span className="font-medium tabular-nums">
+                  {minutes(fun.averageGameSeconds)}
+                </span>
+              </li>
+              <li className="flex items-baseline gap-2">
                 <span className="mr-auto text-ink-dim">Shortest</span>
                 <span className="font-medium tabular-nums">
                   {minutes(fun.shortestGameSeconds)}

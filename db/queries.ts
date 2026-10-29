@@ -416,6 +416,7 @@ export interface FunStats {
   };
   sides: { blue: number; red: number };
   longestGameSeconds: number | null;
+  averageGameSeconds: number | null;
   shortestGameSeconds: number | null;
 }
 
@@ -491,6 +492,13 @@ export async function funStats(): Promise<FunStats> {
       red: played.filter((match) => match.winner === "red").length,
     },
     longestGameSeconds: durations.length === 0 ? null : Math.max(...durations),
+    averageGameSeconds:
+      durations.length === 0
+        ? null
+        : Math.round(
+            durations.reduce((total, seconds) => total + seconds, 0) /
+              durations.length,
+          ),
     shortestGameSeconds: durations.length === 0 ? null : Math.min(...durations),
   };
 }
