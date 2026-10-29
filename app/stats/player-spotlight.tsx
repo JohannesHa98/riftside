@@ -155,7 +155,7 @@ export function PlayerSpotlight({
                     ? "—"
                     : `${(player.kills / player.games).toFixed(1)}/${(player.deaths / player.games).toFixed(1)}/${(player.assists / player.games).toFixed(1)}`
                 }
-                note="k / d / a"
+                note="K/D/A"
               />
               <Tile
                 label="Best game"
