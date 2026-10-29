@@ -109,8 +109,9 @@ UI shows them as **Main / Fill / Never**, the words League players already use.
 `COMFORT_LABELS` in `lib/types.ts` is the only place that mapping lives, so the
 wording can change without a migration.
 
-**Match** — date, the two teams, the suggested role per player (optional, since
-the teams may change them), and which team won. Once the companion app has
+**Match** — date, the two teams and which team won. **Every match comes from
+the companion app**; there is no way to record one by hand, because a
+hand-entered game has none of the stats the site is built on. Once the companion app has
 matched it to a real game it also carries `riot_game_id` (unique, which is what
 makes ingest idempotent), the duration, and per player: champion, K/D/A, CS,
 gold and damage.
@@ -120,11 +121,17 @@ the roster is still stored, with their Riot identity, and shown as unlinked.
 That is why the table has a surrogate `id` and a partial unique index rather
 than a composite primary key. `power_at_time` is nullable for the same reason.
 
-**`role` is the balancer's suggestion and is never overwritten.** What the
-client thinks someone played is kept separately in `client_lane` /
-`client_role` and is not shown as fact — it is derived from movement and is
-plainly wrong in custom games. A real in-house game came back with two
-junglers, two mids and no top.
+**Line-ups are ordered by `role_quest_item`**, the reward the game hands out
+by lane: 1221 and 1220 top, 1209 jungle, 1206 mid, 1208 support. That is the
+game saying which role it assigned. The two it does not name are the bot lane
+and whoever sold their support reward, and CS separates those.
+
+`client_lane` / `client_role` are the client's own guess and are **not** used
+for this. They are derived from movement and a real in-house game of ours came
+back with three junglers and no top.
+
+`match_players.role` held the balancer's suggestion back when games could be
+saved by hand. Nothing writes it now.
 
 ## Two systems that must stay separate
 
@@ -171,10 +178,10 @@ The UI shows the **top 3 suggestions** so one can be chosen, or rerolled.
 Ordered as they appear in the nav — New game first, since that is what the
 site gets opened for.
 
-1. **New game** — pick 10 players, run the balancer, show both teams side by side with total power, suggested roles, and each player's comfort on that role, then save the played game (teams, optional roles, winner)
+1. **New game** — pick 10 players, run the balancer, show both teams side by side with total power, suggested roles, and each player's comfort on that role. Nothing is saved here: the companion records the game once it has been played.
 2. **Players** — list, add, edit, delete players with power level and per-role comfort
-3. **History** — past games, and filling in a winner afterwards
-4. **Stats** — games, win rate, KDA and most-played champions per player
+3. **History** — past games, and deleting one
+4. **Stats** — the ladder, odds and ends, and a per-player spotlight with a radar
 
 ## Planned later (do not build yet, but do not design it out)
 
@@ -252,10 +259,9 @@ route checks for an existing game first, but that check races: two companions
 can both pass it. The unique constraint is the actual guarantee, and the
 violation is caught and reported as a duplicate rather than a failure.
 
-A suggestion saved on the New game page is already a match row, so a game with
-those same ten players within six hours **fills that row in** rather than
-creating a second. The side comes from the game, since where someone actually
-played is a fact and the winner is recorded in those terms.
+Ingest only ever creates a match. It used to merge into a game saved by hand
+on the New game page, but saving by hand is gone — the whole point is that
+every game carries the client's stats, and a hand-entered one carries none.
 
 ### Champion names
 

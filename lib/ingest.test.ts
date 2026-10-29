@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  findSuggestionMatch,
   linkParticipants,
   parseIngestPayload,
   type IngestParticipant,
@@ -237,77 +236,5 @@ describe("linkParticipants", () => {
 
     expect(linked[0].playerId).toBe(1);
     expect(linked[1].playerId).toBeNull();
-  });
-});
-
-describe("findSuggestionMatch", () => {
-  const playedAt = new Date("2026-10-21T21:34:00.000Z");
-  const tenIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-
-  const linked = tenIds.map((id) => ({
-    participant: {} as IngestParticipant,
-    playerId: id,
-    matchedBy: "puuid" as const,
-  }));
-
-  it("finds a suggestion with the same ten players nearby in time", () => {
-    const found = findSuggestionMatch(
-      [{ id: 42, playedAt: new Date("2026-10-21T21:00:00.000Z"), playerIds: tenIds }],
-      linked,
-      playedAt,
-    );
-
-    expect(found?.id).toBe(42);
-  });
-
-  it("ignores a suggestion from another day", () => {
-    const found = findSuggestionMatch(
-      [{ id: 42, playedAt: new Date("2026-10-18T21:00:00.000Z"), playerIds: tenIds }],
-      linked,
-      playedAt,
-    );
-
-    expect(found).toBeNull();
-  });
-
-  it("ignores a suggestion whose roster differs by one player", () => {
-    const found = findSuggestionMatch(
-      [
-        {
-          id: 42,
-          playedAt,
-          playerIds: [...tenIds.slice(0, 9), 99],
-        },
-      ],
-      linked,
-      playedAt,
-    );
-
-    expect(found).toBeNull();
-  });
-
-  it("picks the closest suggestion when an evening has several", () => {
-    const found = findSuggestionMatch(
-      [
-        { id: 1, playedAt: new Date("2026-10-21T18:00:00.000Z"), playerIds: tenIds },
-        { id: 2, playedAt: new Date("2026-10-21T21:20:00.000Z"), playerIds: tenIds },
-      ],
-      linked,
-      playedAt,
-    );
-
-    expect(found?.id).toBe(2);
-  });
-
-  it("will not merge when somebody could not be linked", () => {
-    const withStranger = [...linked.slice(0, 9), { ...linked[9], playerId: null }];
-
-    const found = findSuggestionMatch(
-      [{ id: 42, playedAt, playerIds: tenIds }],
-      withStranger,
-      playedAt,
-    );
-
-    expect(found).toBeNull();
   });
 });

@@ -75,9 +75,9 @@ export function PlayerSpotlight({
               )}
             </p>
             <p className="mt-0.5 text-sm text-ink-dim">
-              {player.decided} game{player.decided === 1 ? "" : "s"} with a result
+              {player.games} game{player.games === 1 ? "" : "s"}
               {player.games > player.decided
-                ? `, ${player.games - player.decided} without`
+                ? ` · ${player.games - player.decided} unfinished`
                 : ""}
             </p>
           </div>

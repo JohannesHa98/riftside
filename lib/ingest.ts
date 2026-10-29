@@ -15,13 +15,6 @@ import { TEAMS, type Team } from "./types";
 export const PLAYERS_PER_GAME = 10;
 export const TEAM_SIZE = 5;
 
-/**
- * How far apart a saved suggestion and a finished game can be and still be
- * taken as the same night. Teams are usually saved minutes before the game,
- * but a long evening and a late result should still connect.
- */
-export const SUGGESTION_WINDOW_HOURS = 6;
-
 export interface IngestParticipant {
   puuid: string;
   riotId: string;
@@ -281,53 +274,6 @@ export function linkParticipants(
 
     return { participant, playerId: null, matchedBy: null };
   });
-}
-
-export interface SuggestionCandidate {
-  id: number;
-  playedAt: Date;
-  playerIds: number[];
-}
-
-/**
- * A suggestion saved on the New game page is already a match row, so a game
- * that turns out to be those same ten players should fill that row in rather
- * than sit beside it as a duplicate.
- *
- * Requires every one of the ten to be linked and the rosters to match exactly:
- * a near miss is a different game, not this one.
- */
-export function findSuggestionMatch(
-  candidates: readonly SuggestionCandidate[],
-  linked: readonly LinkedParticipant[],
-  playedAt: Date,
-  windowHours = SUGGESTION_WINDOW_HOURS,
-): SuggestionCandidate | null {
-  const playerIds = linked.map((entry) => entry.playerId);
-  if (playerIds.some((id) => id === null)) return null;
-
-  const wanted = new Set(playerIds as number[]);
-  if (wanted.size !== PLAYERS_PER_GAME) return null;
-
-  const windowMs = windowHours * 60 * 60 * 1000;
-
-  const withinWindow = candidates.filter(
-    (candidate) =>
-      Math.abs(candidate.playedAt.getTime() - playedAt.getTime()) <= windowMs &&
-      candidate.playerIds.length === wanted.size &&
-      candidate.playerIds.every((id) => wanted.has(id)),
-  );
-
-  if (withinWindow.length === 0) return null;
-
-  // Several suggestions can be saved on one evening; the closest in time to
-  // the finished game is the one it belongs to.
-  return withinWindow.reduce((best, candidate) =>
-    Math.abs(candidate.playedAt.getTime() - playedAt.getTime()) <
-    Math.abs(best.playedAt.getTime() - playedAt.getTime())
-      ? candidate
-      : best,
-  );
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

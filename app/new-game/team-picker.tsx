@@ -14,15 +14,8 @@ import {
 } from "@/lib/balance";
 import { ROLES } from "@/lib/types";
 
-import { SaveTeams } from "./save-teams";
 
-export function TeamPicker({
-  roster,
-  canEdit,
-}: {
-  roster: BalancePlayer[];
-  canEdit: boolean;
-}) {
+export function TeamPicker({ roster }: { roster: BalancePlayer[] }) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [page, setPage] = useState(0);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -219,7 +212,6 @@ export function TeamPicker({
             <TeamCard team={chosenSuggestion.red} side="red" />
           </section>
 
-          {canEdit ? <SaveTeams suggestion={chosenSuggestion} /> : null}
         </div>
       ) : null}
     </div>

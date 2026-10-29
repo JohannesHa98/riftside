@@ -13,7 +13,6 @@ import { championIconUrl, championLabel, championNames } from "@/lib/champions";
 import { ROLE_LABELS, type Team } from "@/lib/types";
 
 import { DeleteMatchButton } from "./delete-match-button";
-import { WinnerButtons } from "./winner-buttons";
 
 export default function HistoryPage() {
   return (
@@ -91,14 +90,6 @@ function MatchCard({
           </span>
         ) : null}
 
-        {match.fromRiot ? (
-          <span
-            title="Picked up automatically from the League client"
-            className="rounded border border-gold/40 bg-gold/10 px-1.5 py-0.5 text-[10px] font-medium text-gold uppercase"
-          >
-            Tracked
-          </span>
-        ) : null}
 
         <ChevronIcon />
       </summary>
@@ -120,8 +111,7 @@ function MatchCard({
         </div>
 
         {canEdit ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
-            <WinnerButtons matchId={match.id} winner={match.winner} />
+          <div className="mt-4 flex justify-end border-t border-line pt-3">
             <DeleteMatchButton
               matchId={match.id}
               playedAt={match.playedAt.toLocaleDateString("en-GB", {

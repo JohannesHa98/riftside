@@ -2,7 +2,6 @@ import { Suspense } from "react";
 
 import { EmptyState, PageHeader } from "@/components/ui";
 import { listActivePlayers } from "@/db/queries";
-import { isSignedIn } from "@/lib/auth";
 import { PLAYERS_PER_GAME } from "@/lib/balance";
 import { toBalancePlayer } from "@/lib/player";
 
@@ -13,7 +12,7 @@ export default function NewGamePage() {
     <div>
       <PageHeader
         title="New game"
-        description="Pick ten players. Roles are a suggestion — sort them out among yourselves."
+        description="Pick ten players for two even teams. The companion app records the game itself once you have played it."
       />
 
       <Suspense fallback={<RosterSkeleton />}>
@@ -24,11 +23,7 @@ export default function NewGamePage() {
 }
 
 async function Picker() {
-  const [players, canEdit] = await Promise.all([
-    listActivePlayers(),
-    isSignedIn(),
-  ]);
-  const roster = players.map(toBalancePlayer);
+  const roster = (await listActivePlayers()).map(toBalancePlayer);
 
   if (roster.length < PLAYERS_PER_GAME) {
     return (
@@ -39,7 +34,7 @@ async function Picker() {
     );
   }
 
-  return <TeamPicker roster={roster} canEdit={canEdit} />;
+  return <TeamPicker roster={roster} />;
 }
 
 function RosterSkeleton() {

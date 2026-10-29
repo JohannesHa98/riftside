@@ -90,10 +90,10 @@ const ROLES_BY_EXPECTED_CS: Role[] = ["bot", "top", "mid", "jungle", "support"];
 /**
  * Put a side in role order: top, jungle, mid, bot, support.
  *
- * The balancer's suggested role wins when the game was saved from a
- * suggestion, since we chose it. Otherwise the role quest reward says what
- * the game itself assigned. Only what is left over falls back to CS, which
- * separates a bot lane from a support reliably enough.
+ * The role quest reward decides it — that is the game itself saying which
+ * role it assigned. It names top, jungle, mid and support; the two it does
+ * not name are the bot lane and whoever sold their support reward, and CS
+ * tells those apart with room to spare.
  *
  * The client's own lane is deliberately not used: it is derived from movement
  * and reports three junglers and no top in a real game of ours.
@@ -104,10 +104,9 @@ function orderLineup(side: MatchParticipant[]): MatchParticipant[] {
 
   for (const participant of side) {
     const known =
-      participant.role ??
-      (participant.roleQuestItem === null
+      participant.roleQuestItem === null
         ? undefined
-        : ROLE_BY_QUEST_ITEM[participant.roleQuestItem]);
+        : ROLE_BY_QUEST_ITEM[participant.roleQuestItem];
 
     if (known !== undefined && !taken.has(known)) {
       participant.position = known;

@@ -1,12 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { and, eq, gte, inArray, isNull, lte } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db, matchBans, matchPlayers, matches, players } from "@/db";
 import {
-  SUGGESTION_WINDOW_HOURS,
-  findSuggestionMatch,
   linkParticipants,
   parseIngestPayload,
   type IngestGame,
@@ -78,14 +76,9 @@ export async function POST(request: Request): Promise<Response> {
   const linked = linkParticipants(game.participants, roster);
   const powerById = new Map(roster.map((player) => [player.id, player.power]));
 
-  const suggestion = await findSuggestion(game, linked);
-
   let matchId: number;
   try {
-    matchId =
-      suggestion === null
-        ? await createMatch(game, linked, powerById)
-        : await fillInSuggestion(suggestion.id, game, linked);
+    matchId = await createMatch(game, linked, powerById);
   } catch (error) {
     // Two companions can send the same game at the same moment and both get
     // past the check above. riot_game_id is UNIQUE, so the database refuses
@@ -111,7 +104,7 @@ export async function POST(request: Request): Promise<Response> {
 
   return json(
     {
-      status: suggestion === null ? "created" : "merged",
+      status: "created",
       matchId,
       linked: linked.filter((entry) => entry.playerId !== null).length,
       unlinked: linked.filter((entry) => entry.playerId === null).length,
@@ -200,52 +193,6 @@ function authorised(request: Request): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** A match saved from the New game page that turns out to be this game. */
-async function findSuggestion(game: IngestGame, linked: LinkedParticipant[]) {
-  const windowMs = SUGGESTION_WINDOW_HOURS * 60 * 60 * 1000;
-
-  const candidates = await db
-    .select({ id: matches.id, playedAt: matches.playedAt })
-    .from(matches)
-    .where(
-      and(
-        isNull(matches.riotGameId),
-        gte(matches.playedAt, new Date(game.playedAt.getTime() - windowMs)),
-        lte(matches.playedAt, new Date(game.playedAt.getTime() + windowMs)),
-      ),
-    );
-
-  if (candidates.length === 0) return null;
-
-  const rosters = await db
-    .select({ matchId: matchPlayers.matchId, playerId: matchPlayers.playerId })
-    .from(matchPlayers)
-    .where(
-      inArray(
-        matchPlayers.matchId,
-        candidates.map((candidate) => candidate.id),
-      ),
-    );
-
-  const playerIdsByMatch = new Map<number, number[]>();
-  for (const row of rosters) {
-    if (row.playerId === null) continue;
-    const list = playerIdsByMatch.get(row.matchId) ?? [];
-    list.push(row.playerId);
-    playerIdsByMatch.set(row.matchId, list);
-  }
-
-  return findSuggestionMatch(
-    candidates.map((candidate) => ({
-      id: candidate.id,
-      playedAt: candidate.playedAt,
-      playerIds: playerIdsByMatch.get(candidate.id) ?? [],
-    })),
-    linked,
-    game.playedAt,
-  );
-}
-
 async function createMatch(
   game: IngestGame,
   linked: LinkedParticipant[],
@@ -269,8 +216,6 @@ async function createMatch(
         matchId: match.id,
         playerId: entry.playerId,
         team: entry.participant.side,
-        // No suggested role: nobody ran the balancer for this one.
-        role: null,
         powerAtTime:
           entry.playerId === null ? null : (powerById.get(entry.playerId) ?? null),
         ...statsOf(entry),
@@ -284,48 +229,6 @@ async function createMatch(
   }
 
   return match.id;
-}
-
-/**
- * Fills Riot's data into the row the suggestion already created, so one game
- * stays one row.
- *
- * The side is taken from the game rather than the suggestion: which team
- * someone actually played on is a fact, and the winner is recorded in those
- * terms. The suggested role is left exactly as it was.
- */
-async function fillInSuggestion(
-  matchId: number,
-  game: IngestGame,
-  linked: LinkedParticipant[],
-): Promise<number> {
-  await db
-    .update(matches)
-    .set({
-      playedAt: game.playedAt,
-      winner: game.winner,
-      riotGameId: game.gameId,
-      durationSeconds: game.durationSeconds,
-      source: "riot",
-      rawPayload: game.raw,
-    })
-    .where(eq(matches.id, matchId));
-
-  for (const entry of linked) {
-    if (entry.playerId === null) continue;
-
-    await db
-      .update(matchPlayers)
-      .set({ team: entry.participant.side, ...statsOf(entry) })
-      .where(
-        and(
-          eq(matchPlayers.matchId, matchId),
-          eq(matchPlayers.playerId, entry.playerId),
-        ),
-      );
-  }
-
-  return matchId;
 }
 
 function statsOf(entry: LinkedParticipant) {
