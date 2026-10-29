@@ -95,7 +95,7 @@ variables. **Only two are used:**
 `companion/.env` holds `WEBSITE_URL`, the same `INGEST_SECRET`, and optionally
 `LOCKFILE_PATH`.
 
-`.env.example` lists all four. See `## Auth` below.
+`.env.example` lists all five. See `## Auth` below.
 
 Ignore every other `POSTGRES_*`, `PG*` and `NEON_AUTH_*` variable. Neon Auth is
 not set up and should not be.

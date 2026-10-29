@@ -1,36 +1,194 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Riftside
 
-## Getting Started
+**[riftside.vercel.app](https://riftside.vercel.app)**
 
-First, run the development server:
+A private site for running 5v5 in-house League of Legends games with a fixed
+group of friends. Pick the ten people playing tonight, and it splits them into
+two even teams and suggests a role for each player. When the game finishes, a
+companion app on one player's PC notices and records it — champions, K/D/A, CS,
+gold, damage, bans — with nothing to type in by hand.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Riot's public API does not expose custom games, so the stats on this site
+cannot be fetched from anywhere. They are read out of the League client's own
+local API as the games finish, or they are lost.
+
+---
+
+## What it does
+
+| Page | |
+| --- | --- |
+| **New game** | Pick ten players, get the three best team splits with suggested roles |
+| **Players** | The roster: a power level and a comfort level per role |
+| **History** | Past games, line-ups in role order, full scorelines |
+| **Stats** | The ladder, a per-player radar spotlight, and assorted records |
+
+Reading is public. Every write is behind a login.
+
+## How a game gets recorded
+
+```
+League client                companion app              riftside.vercel.app
+(local LCU API)      ──▶     (Node, one PC)      ──▶    POST /api/ingest
+  finished game              polls, parses,              validate, link to
+  on loopback HTTPS          sends once                  players, store
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The companion is **read-only**: it never sends a command to the client. It
+authenticates against the client with the lockfile credentials every League
+install writes to disk, accepts the client's self-signed certificate on
+loopback only, and posts finished in-house games to the site with a shared
+secret.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The website is the single record of what has been sent. The companion keeps no
+local list of sent games — one would disagree with reality the moment a game
+was deleted on the site — and re-sending is free, because ingest is idempotent.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## The parts worth reading
 
-## Learn More
+**The balancer** (`lib/balance.ts`) is a pure TypeScript module with no React
+or database imports, covered by 23 unit tests. Ten players split into two teams
+of five is only 126 unique splits, and each team has 120 role assignments, so
+it brute-forces the whole space instead of guessing. It runs in the browser:
+the search is cheaper than a round trip, and the suggestions re-rank instantly
+as the selection changes.
 
-To learn more about Next.js, take a look at the following resources:
+Its one rule is that **two systems never leak into each other**: team strength
+is the sum of power levels and roles never change it; role fit is how happy
+players are with their assigned role and comfort never contributes to strength.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Roles come from the game, not from a guess.** The League client reports a
+`lane` for every participant, derived from where they walked — in a real
+in-house game of ours it returned three junglers and no top. The reliable
+signal turned out to be the role quest reward item the game hands out by lane.
+That was found by reading archived payloads, not from documentation, and it
+replaced an entire hand-entry feature: once the game itself says who played
+what, asking people to record it is redundant.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Ingest is idempotent** on Riot's game id, which carries a UNIQUE constraint.
+The route checks for an existing game first, but that check races — two
+companions can both pass it — so the constraint is the actual guarantee and the
+violation is caught and reported as a duplicate rather than a failure.
+Participants are matched on PUUID first and Riot ID second, never two to the
+same player, and a name match backfills the PUUID so the guess is needed once.
 
-## Deploy on Vercel
+**Every game's full client response is archived.** That paid off directly: when
+the stats needed vision score, which had never been stored as a column, the
+migration that added the column backfilled it out of the archived payloads —
+all 100 existing participant rows, no data lost to a schema decision made
+months earlier.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**The stats know what a support is.** CS is not counted for a game played on
+support, because a support finishes on a fraction of a laner's CS by design and
+counting those games quietly punished whoever filled. Someone who supports more
+often than not gets a Vision axis on their radar in place of Farming, scaled
+against the other supports rather than against laners' CS.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Auth is one password, not an auth provider.** scrypt for the hash, a signed
+JWT in an HttpOnly SameSite=Lax cookie, and a guard inside every mutating
+server action — server actions are reachable by direct POST, so hiding a button
+protects nothing. The tests cover forged, expired and `alg: none` tokens.
+
+## Stack
+
+- **Next.js 16** (App Router) + **React 19** + **TypeScript** in strict mode
+- **Tailwind CSS v4**, dark by default, light theme opt-in through CSS tokens
+- **Neon Postgres** via `@neondatabase/serverless`
+- **Drizzle ORM** with tracked SQL migrations (`drizzle-kit generate`, never `push`)
+- **Vitest** — 100 tests over the balancer, ingest rules, role assignment, auth, hashing and the companion's parser
+- **Vercel** — pushing to `master` deploys
+- Companion: **Node 24** running TypeScript directly by type-stripping, one runtime dependency (`ws`)
+
+`cacheComponents` is on, so every uncached database read sits inside its own
+`<Suspense>` boundary and the pages stream rather than block on the slowest
+query.
+
+## Running it
+
+```bash
+npm install
+cp .env.example .env.local     # fill in the four values below
+npm run db:migrate
+npm run dev
+```
+
+| Variable | |
+| --- | --- |
+| `DATABASE_URL` | Pooled connection, used at runtime |
+| `DATABASE_URL_UNPOOLED` | Direct connection, used by drizzle-kit |
+| `AUTH_SECRET` | Signs the session cookie |
+| `ADMIN_PASSWORD_HASH` | From `npm run auth:new` |
+| `INGEST_SECRET` | Shared with the companion app |
+
+```bash
+npm run build     # must pass before every commit
+npm run lint
+npm test
+```
+
+The companion has [its own README](companion/README.md).
+
+## Layout
+
+```
+app/
+  new-game/     pick ten, balance            players/    roster CRUD
+  history/      past games                   stats/      ladder, spotlight
+  login/        the one account              api/ingest/ receives games
+components/     shared UI
+db/             schema, queries, migrations
+lib/            balance, roles, ingest rules, auth, types   ← the pure modules
+companion/      the Windows companion app (separate package)
+```
+
+The pure modules in `lib/` hold every rule worth testing and import nothing
+from Next.js, which is what makes them testable without a database or a
+browser.
+
+## Built with Claude Code
+
+This was written by me together with [Claude Code](https://claude.com/claude-code),
+and the way that collaboration was set up is a deliberate part of the project.
+
+[`CLAUDE.md`](CLAUDE.md) is the working agreement: the stack, the domain rules
+that must not be violated, the conventions, and — importantly — what *not* to
+do. It carries the reasoning behind decisions that are not obvious from the
+code, so neither of us re-litigates them later: why the client's lane guess is
+ignored, why the password hash uses `.` as a separator rather than `$`, why
+line-ups are ordered by the role quest item.
+
+The working rules that made it productive:
+
+- **A plan before code**, in small steps, with `npm run build`, `npm run lint`
+  and `npm test` green before each commit.
+- **Rules live in tests, not in prose.** The balancer's tie-breaking, the
+  ingest validation and the role assignment are pure functions with unit tests,
+  so a change that breaks a rule fails immediately instead of being noticed in
+  a game three weeks later.
+- **Verification proportional to risk.** Build, lint and tests always. A
+  browser only for behaviour the build cannot see — hydration, a server action,
+  a new database write. Not for CSS or copy. Over-verifying is a real cost, and
+  the rule is written into `CLAUDE.md` so it is applied consistently.
+- **Real payloads over remembered field names.** The LCU API is undocumented
+  and unversioned, so the companion's parser was built from dumped responses
+  and is tested against committed fixtures. Three fields are not what anyone
+  would guess: `teams[].win` is the string `"Win"`/`"Fail"`, CS is
+  `totalMinionsKilled` **plus** `neutralMinionsKilled`, and
+  `participantIdentities` joins on `participantId` rather than list position.
+
+The judgement calls stayed mine — what to build, what to cut, what the rules
+of the domain actually are. Removing the hand-entry feature and taking roles
+from the role quest instead came from knowing how the game works, not from the
+code.
+
+## Not built yet
+
+- Elo-style automatic power adjustment from results. The schema already stores
+  `power_at_time` per participant and archives every payload, so the history
+  needed to replay it exists.
+- Linking a participant who was not on the roster to a player after the fact.
+
+---
+
+Riftside is not endorsed by Riot Games and does not reflect the views of Riot
+Games or anyone officially involved in producing or managing League of Legends.
