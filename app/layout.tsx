@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
 
 import { SessionControls } from "@/components/session-controls";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { themeScript } from "@/components/splurrp-toggle";
 
@@ -48,6 +49,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
           {children}
         </main>
+
+        <SiteFooter />
       </body>
     </html>
   );
