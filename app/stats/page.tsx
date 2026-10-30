@@ -156,11 +156,7 @@ function Row({
       </td>
 
       <td className="px-2 py-2">
-        <SpotlightLink
-          playerId={player.playerId}
-          name={player.name}
-          className="font-medium"
-        />
+        <SpotlightLink name={player.name} className="font-medium" />
         <span
           title="Power level, used by the balancer"
           className="ml-1.5 text-xs text-gold tabular-nums"

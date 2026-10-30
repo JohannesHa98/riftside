@@ -9,7 +9,7 @@ import { inputStyles } from "@/components/ui";
 import type { ChampionRecord, GameHighlight, PlayerProfile } from "@/db/queries";
 
 import { Radar, RadarLegend } from "./radar";
-import { SPOTLIGHT_ANCHOR } from "./spotlight-link";
+import { SPOTLIGHT_ANCHOR, spotlightUrl } from "./spotlight-link";
 
 /** How many champions the spotlight lists under "Plays most". */
 const CHAMPIONS_SHOWN = 10;
@@ -41,8 +41,11 @@ export function PlayerSpotlight({
   const params = useSearchParams();
   const [query, setQuery] = useState("");
 
-  const asked = Number(params.get("player"));
-  const fromUrl = players.some((entry) => entry.playerId === asked) ? asked : null;
+  // Matched without case, so a link somebody typed by hand still lands.
+  const asked = (params.get("player") ?? "").toLocaleLowerCase();
+  const fromUrl =
+    players.find((entry) => entry.name.toLocaleLowerCase() === asked)?.playerId ??
+    null;
 
   // The search box selects before the URL has caught up, so its choice stands
   // until the parameter changes — at which point the URL wins again, which is
@@ -74,13 +77,13 @@ export function PlayerSpotlight({
 
   if (player === null) return null;
 
-  function choose(id: number) {
-    setPicked(id);
+  function choose(entry: PlayerProfile) {
+    setPicked(entry.playerId);
     setQuery("");
     // replace, not push: flicking through players should not fill the back
     // button with every one of them. scroll: false because the panel is
     // already in view — the search box that was just used is inside it.
-    router.replace(`/stats?player=${id}#${SPOTLIGHT_ANCHOR}`, { scroll: false });
+    router.replace(spotlightUrl(entry.name), { scroll: false });
   }
 
   return (
@@ -129,7 +132,7 @@ export function PlayerSpotlight({
                   <li key={entry.playerId}>
                     <button
                       type="button"
-                      onClick={() => choose(entry.playerId)}
+                      onClick={() => choose(entry)}
                       className="flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm hover:bg-panel"
                     >
                       <span className="mr-auto truncate">{entry.name}</span>

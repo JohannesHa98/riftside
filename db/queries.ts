@@ -338,7 +338,6 @@ export async function countMatchesWithoutWinner(): Promise<number> {
 }
 
 export interface PlayerAverage {
-  playerId: number;
   name: string;
   riotId: string | null;
   value: number;
@@ -346,7 +345,6 @@ export interface PlayerAverage {
 }
 
 export interface SingleGameRecord {
-  playerId: number;
   name: string;
   riotId: string | null;
   value: number;
@@ -391,7 +389,6 @@ export async function funStats(): Promise<FunStats> {
       .select({
         id: matchPlayers.id,
         matchId: matchPlayers.matchId,
-        playerId: players.id,
         name: players.name,
         riotId: players.riotId,
         team: matchPlayers.team,
@@ -481,7 +478,6 @@ function tally(ids: number[]): ChampionTally[] {
 interface StatRow {
   id: number;
   matchId: number;
-  playerId: number;
   name: string;
   riotId: string | null;
   team: Team;
@@ -547,7 +543,7 @@ function perGameLeaders(
 ): PlayerAverage[] {
   const totals = new Map<
     string,
-    { playerId: number; riotId: string | null; total: number; games: number }
+    { riotId: string | null; total: number; games: number }
   >();
 
   for (const row of rows) {
@@ -555,7 +551,6 @@ function perGameLeaders(
     if (value === null) continue;
 
     const entry = totals.get(row.name) ?? {
-      playerId: row.playerId,
       riotId: row.riotId,
       total: 0,
       games: 0,
@@ -568,7 +563,6 @@ function perGameLeaders(
   return [...totals]
     .filter(([, entry]) => entry.games >= MIN_RANKED_GAMES)
     .map(([name, entry]) => ({
-      playerId: entry.playerId,
       name,
       riotId: entry.riotId,
       value: entry.total / entry.games,
@@ -589,13 +583,7 @@ function perGameLeaders(
 function csPerMinuteLeaders(rows: StatRow[]): PlayerAverage[] {
   const totals = new Map<
     string,
-    {
-      playerId: number;
-      riotId: string | null;
-      cs: number;
-      seconds: number;
-      games: number;
-    }
+    { riotId: string | null; cs: number; seconds: number; games: number }
   >();
 
   for (const row of rows) {
@@ -605,7 +593,6 @@ function csPerMinuteLeaders(rows: StatRow[]): PlayerAverage[] {
     if (row.role === "support") continue;
 
     const entry = totals.get(row.name) ?? {
-      playerId: row.playerId,
       riotId: row.riotId,
       cs: 0,
       seconds: 0,
@@ -620,7 +607,6 @@ function csPerMinuteLeaders(rows: StatRow[]): PlayerAverage[] {
   return [...totals]
     .filter(([, entry]) => entry.games >= MIN_RANKED_GAMES)
     .map(([name, entry]) => ({
-      playerId: entry.playerId,
       name,
       riotId: entry.riotId,
       value: entry.cs / (entry.seconds / 60),
@@ -642,7 +628,6 @@ function bestBy(
     if (best !== null && value <= best.value) continue;
 
     best = {
-      playerId: row.playerId,
       name: row.name,
       riotId: row.riotId,
       value,

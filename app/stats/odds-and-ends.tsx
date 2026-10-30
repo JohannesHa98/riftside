@@ -138,11 +138,7 @@ function Leaders({
     <ol className="space-y-1.5">
       {players.map((player) => (
         <li key={player.name} className="flex items-baseline gap-2 text-sm">
-          <SpotlightLink
-            playerId={player.playerId}
-            name={player.name}
-            className="mr-auto truncate"
-          />
+          <SpotlightLink name={player.name} className="mr-auto truncate" />
           <span className="font-medium tabular-nums">
             {player.value.toFixed(1)}
           </span>
@@ -231,7 +227,7 @@ function Record({
       ) : (
         <>
           <span className="mr-auto truncate">
-            <SpotlightLink playerId={record.playerId} name={record.name} />
+            <SpotlightLink name={record.name} />
             <span className="ml-1 text-xs text-ink-dim">
               {championLabel(champions, record.championId)}
             </span>
