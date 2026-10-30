@@ -1,25 +1,29 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { MouseEvent } from "react";
 
 /** The anchor on the spotlight section, so a click can pull the view to it. */
 export const SPOTLIGHT_ANCHOR = "player-spotlight";
 
 /** Where a player's spotlight lives. One place, so the two ends agree. */
 export function spotlightUrl(name: string): string {
-  return `/stats?player=${encodeURIComponent(name)}#${SPOTLIGHT_ANCHOR}`;
+  return `/stats?player=${encodeURIComponent(name)}`;
+}
+
+/** The same, with the anchor — for a link that is opened rather than clicked. */
+export function spotlightHref(name: string): string {
+  return `${spotlightUrl(name)}#${SPOTLIGHT_ANCHOR}`;
 }
 
 /**
- * Glide to the spotlight rather than cutting to it, so it is clear the page
- * moved rather than changed.
+ * Glide to the spotlight rather than cutting to it, so it reads as the page
+ * moving rather than changing.
  *
- * The App Router scrolls to a hash itself, instantly, and overrides CSS
- * `scroll-behavior: smooth` while it does — so the link turns Next's scroll
- * off and does its own. Anyone who has asked their system for less motion
- * still gets the cut.
+ * Honours a system asking for less motion, where the cut is the right answer.
  */
-function glideToSpotlight() {
+export function glideToSpotlight() {
   const target = document.getElementById(SPOTLIGHT_ANCHOR);
   if (target === null) return;
 
@@ -29,6 +33,17 @@ function glideToSpotlight() {
     behavior: stillness ? "auto" : "smooth",
     block: "start",
   });
+}
+
+/** Ctrl/⌘/shift-click and middle-click belong to the browser, not to us. */
+function opensElsewhere(event: MouseEvent<HTMLAnchorElement>): boolean {
+  return (
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey ||
+    event.button !== 0
+  );
 }
 
 /**
@@ -44,6 +59,12 @@ function glideToSpotlight() {
  * UNIQUE in the database, so one always means one player. The cost is that
  * renaming a player breaks old links to them, which is a fair trade for a
  * roster of twenty friends.
+ *
+ * The href carries the `#player-spotlight` anchor so a copied link lands on
+ * the panel in a fresh tab, where the browser does the scrolling — but an
+ * ordinary click navigates without it. The App Router jumps straight to a
+ * hash and overrides CSS scroll-behavior while it does, which would cut off
+ * the glide below before it started.
  */
 export function SpotlightLink({
   name,
@@ -52,14 +73,20 @@ export function SpotlightLink({
   name: string;
   className?: string;
 }) {
+  const router = useRouter();
+
+  function handleClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (opensElsewhere(event)) return;
+
+    event.preventDefault();
+    router.replace(spotlightUrl(name), { scroll: false });
+    glideToSpotlight();
+  }
+
   return (
     <Link
-      href={spotlightUrl(name)}
-      // Next would jump to the anchor the moment the URL changes; this scrolls
-      // instead. The hash stays in the href so the link still works pasted
-      // into a fresh tab, where the browser does the scrolling.
-      scroll={false}
-      onClick={glideToSpotlight}
+      href={spotlightHref(name)}
+      onClick={handleClick}
       title={`Put ${name} in the spotlight`}
       className={`underline decoration-ink-dim/40 underline-offset-2 transition-colors hover:text-gold hover:decoration-gold ${className}`}
     >
