@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { PlayerName } from "@/components/player-name";
 import { inputStyles } from "@/components/ui";
-import type { GameHighlight, PlayerProfile } from "@/db/queries";
+import type { ChampionRecord, GameHighlight, PlayerProfile } from "@/db/queries";
 
 import { Radar, RadarLegend } from "./radar";
 
@@ -189,6 +189,11 @@ export function PlayerSpotlight({
                   {player.champions.slice(0, CHAMPIONS_SHOWN).map((champion) => (
                     <li
                       key={champion.championId}
+                      title={`${champion.games} game${champion.games === 1 ? "" : "s"}${
+                        champion.decided === 0
+                          ? ", none with a result recorded"
+                          : ` · ${champion.wins}W-${champion.decided - champion.wins}L`
+                      }`}
                       className="flex items-center gap-1.5 rounded-md border border-line bg-surface/60 px-2 py-1"
                     >
                       <Image
@@ -205,6 +210,7 @@ export function PlayerSpotlight({
                       <span className="text-xs text-ink-dim tabular-nums">
                         {champion.games}
                       </span>
+                      <ChampionWinRate champion={champion} />
                     </li>
                   ))}
                 </ul>
@@ -214,6 +220,27 @@ export function PlayerSpotlight({
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * The win rate on one champion, which is often over one or two games — so the
+ * record itself sits in the tile's title, where the sample size is visible
+ * rather than hidden behind a round number.
+ */
+function ChampionWinRate({ champion }: { champion: ChampionRecord }) {
+  if (champion.decided === 0) {
+    return <span className="text-xs text-ink-dim">&mdash;</span>;
+  }
+
+  const rate = champion.wins / champion.decided;
+
+  return (
+    <span
+      className={`text-xs tabular-nums ${rate >= 0.5 ? "text-good" : "text-ink-dim"}`}
+    >
+      {Math.round(rate * 100)}%
+    </span>
   );
 }
 

@@ -692,6 +692,17 @@ export function gameScore(game: GameHighlight): number {
   return game.kills + game.assists / 2 - game.deaths;
 }
 
+/**
+ * A champion someone plays, with how it has gone. `decided` is games with a
+ * winner recorded, which is what a win rate can honestly be taken over.
+ */
+export interface ChampionRecord {
+  championId: number;
+  games: number;
+  wins: number;
+  decided: number;
+}
+
 export interface PlayerProfile {
   playerId: number;
   name: string;
@@ -706,7 +717,7 @@ export interface PlayerProfile {
   deaths: number;
   assists: number;
   kda: number | null;
-  champions: ChampionTally[];
+  champions: ChampionRecord[];
   /** Their best and worst game, scored by `gameScore` below. */
   best: GameHighlight | null;
   worst: GameHighlight | null;
@@ -805,7 +816,7 @@ export async function spotlight(): Promise<Spotlight> {
     /** Summed per game, so one lopsided game cannot dominate the average. */
     shareTotal: number;
     shareGames: number;
-    champions: Map<number, number>;
+    champions: Map<number, { games: number; wins: number; decided: number }>;
   }
 
   const running = new Map<number, Running>();
@@ -901,10 +912,17 @@ export async function spotlight(): Promise<Spotlight> {
     }
 
     if (row.championId !== null && row.championId > 0) {
-      entry.champions.set(
-        row.championId,
-        (entry.champions.get(row.championId) ?? 0) + 1,
-      );
+      const champion = entry.champions.get(row.championId) ?? {
+        games: 0,
+        wins: 0,
+        decided: 0,
+      };
+      champion.games += 1;
+      if (row.winner !== null) {
+        champion.decided += 1;
+        if (row.winner === row.team) champion.wins += 1;
+      }
+      entry.champions.set(row.championId, champion);
     }
   }
 
@@ -922,7 +940,7 @@ export async function spotlight(): Promise<Spotlight> {
         : (profile.kills + profile.assists) / Math.max(profile.deaths, 1);
 
     profile.champions = [...totals.champions]
-      .map(([championId, games]) => ({ championId, games }))
+      .map(([championId, record]) => ({ championId, ...record }))
       .sort((a, b) => b.games - a.games || a.championId - b.championId);
 
     // More games on support than off it, and vision to show for them: the
