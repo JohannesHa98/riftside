@@ -7,8 +7,9 @@ import {
   type PlayerAverage,
   type SingleGameRecord,
 } from "@/db/queries";
-import { PlayerName } from "@/components/player-name";
 import { championIconUrl, championLabel, championNames } from "@/lib/champions";
+
+import { SpotlightLink } from "./spotlight-link";
 
 /** The bits below the ladder: nothing load-bearing, all of it fun. */
 export async function OddsAndEnds() {
@@ -137,9 +138,9 @@ function Leaders({
     <ol className="space-y-1.5">
       {players.map((player) => (
         <li key={player.name} className="flex items-baseline gap-2 text-sm">
-          <PlayerName
+          <SpotlightLink
+            playerId={player.playerId}
             name={player.name}
-            riotId={player.riotId}
             className="mr-auto truncate"
           />
           <span className="font-medium tabular-nums">
@@ -230,7 +231,7 @@ function Record({
       ) : (
         <>
           <span className="mr-auto truncate">
-            <PlayerName name={record.name} riotId={record.riotId} />
+            <SpotlightLink playerId={record.playerId} name={record.name} />
             <span className="ml-1 text-xs text-ink-dim">
               {championLabel(champions, record.championId)}
             </span>

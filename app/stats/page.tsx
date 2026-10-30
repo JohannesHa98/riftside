@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { PlayerName } from "@/components/player-name";
 import { EmptyState, PageHeader } from "@/components/ui";
 import {
   MIN_RANKED_GAMES,
@@ -18,6 +17,7 @@ import { championIconUrl, championLabel, championNames } from "@/lib/champions";
 
 import { OddsAndEnds } from "./odds-and-ends";
 import { PlayerSpotlight } from "./player-spotlight";
+import { SpotlightLink } from "./spotlight-link";
 
 export default function StatsPage() {
   return (
@@ -156,9 +156,9 @@ function Row({
       </td>
 
       <td className="px-2 py-2">
-        <PlayerName
+        <SpotlightLink
+          playerId={player.playerId}
           name={player.name}
-          riotId={player.riotId}
           className="font-medium"
         />
         <span

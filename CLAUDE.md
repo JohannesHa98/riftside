@@ -199,7 +199,12 @@ site gets opened for.
 1. **New game** — pick 10 players, run the balancer, show both teams side by side with total power, suggested roles, and each player's comfort on that role. Nothing is saved here: the companion records the game once it has been played.
 2. **Players** — list, add, edit, delete players with power level and per-role comfort
 3. **History** — past games, and deleting one
-4. **Stats** — the ladder, odds and ends, and a per-player spotlight with a radar
+4. **Stats** — the ladder, odds and ends, and a per-player spotlight with a
+   radar. Every name on this page puts that player in the spotlight rather
+   than leaving the site: the selection lives in `?player=`, which is how a
+   name rendered on the server in its own Suspense boundary reaches the
+   spotlight's client state. The one name that still links to dpm.lol is the
+   spotlight's own heading, where selecting would do nothing.
 
 ## Planned later (do not build yet, but do not design it out)
 

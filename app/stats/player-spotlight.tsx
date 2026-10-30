@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { PlayerName } from "@/components/player-name";
@@ -8,16 +9,24 @@ import { inputStyles } from "@/components/ui";
 import type { ChampionRecord, GameHighlight, PlayerProfile } from "@/db/queries";
 
 import { Radar, RadarLegend } from "./radar";
+import { SPOTLIGHT_ANCHOR } from "./spotlight-link";
 
 /** How many champions the spotlight lists under "Plays most". */
 const CHAMPIONS_SHOWN = 10;
 
 /**
- * One player, picked by search, drawn against the group.
+ * One player, picked by search or by a name elsewhere on the page, drawn
+ * against the group.
  *
  * Everything the panel needs is handed over at once — a couple of dozen
  * players with a dozen numbers each — so switching player is instant and
  * needs no round trip.
+ *
+ * Who is shown lives in `?player=`, because the names in the ladder and the
+ * odds and ends are rendered on the server in their own Suspense boundaries
+ * and have no other way to reach this component's state. The search box sets
+ * the same parameter, so there is one answer to who is selected, and a
+ * spotlight can be linked to.
  */
 export function PlayerSpotlight({
   players,
@@ -28,9 +37,26 @@ export function PlayerSpotlight({
   average: number[];
   champions: Record<number, string>;
 }) {
-  // Already sorted by ladder position, so the first is the player on top.
-  const [selectedId, setSelectedId] = useState(players[0]?.playerId ?? null);
+  const router = useRouter();
+  const params = useSearchParams();
   const [query, setQuery] = useState("");
+
+  const asked = Number(params.get("player"));
+  const fromUrl = players.some((entry) => entry.playerId === asked) ? asked : null;
+
+  // The search box selects before the URL has caught up, so its choice stands
+  // until the parameter changes — at which point the URL wins again, which is
+  // what makes a click on a name in the ladder take effect.
+  const [picked, setPicked] = useState<number | null>(null);
+  const [seenInUrl, setSeenInUrl] = useState(fromUrl);
+
+  if (fromUrl !== seenInUrl) {
+    setSeenInUrl(fromUrl);
+    setPicked(null);
+  }
+
+  // Already sorted by ladder position, so the first is the player on top.
+  const selectedId = picked ?? fromUrl ?? players[0]?.playerId ?? null;
 
   const needle = query.trim().toLocaleLowerCase();
 
@@ -49,12 +75,16 @@ export function PlayerSpotlight({
   if (player === null) return null;
 
   function choose(id: number) {
-    setSelectedId(id);
+    setPicked(id);
     setQuery("");
+    // replace, not push: flicking through players should not fill the back
+    // button with every one of them. scroll: false because the panel is
+    // already in view — the search box that was just used is inside it.
+    router.replace(`/stats?player=${id}#${SPOTLIGHT_ANCHOR}`, { scroll: false });
   }
 
   return (
-    <section className="mt-8">
+    <section id={SPOTLIGHT_ANCHOR} className="mt-8 scroll-mt-4">
       <h2 className="mb-3 text-xs font-semibold text-ink-dim uppercase">
         Player spotlight
       </h2>
