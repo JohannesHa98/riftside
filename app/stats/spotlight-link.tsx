@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
 
+import { glideTo } from "./glide";
+
 /** The anchor on the spotlight section, so a click can pull the view to it. */
 export const SPOTLIGHT_ANCHOR = "player-spotlight";
 
@@ -17,22 +19,10 @@ export function spotlightHref(name: string): string {
   return `${spotlightUrl(name)}#${SPOTLIGHT_ANCHOR}`;
 }
 
-/**
- * Glide to the spotlight rather than cutting to it, so it reads as the page
- * moving rather than changing.
- *
- * Honours a system asking for less motion, where the cut is the right answer.
- */
+/** Glide to the spotlight, so it reads as the page moving rather than changing. */
 export function glideToSpotlight() {
   const target = document.getElementById(SPOTLIGHT_ANCHOR);
-  if (target === null) return;
-
-  const stillness = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  target.scrollIntoView({
-    behavior: stillness ? "auto" : "smooth",
-    block: "start",
-  });
+  if (target !== null) glideTo(target);
 }
 
 /** Ctrl/⌘/shift-click and middle-click belong to the browser, not to us. */
