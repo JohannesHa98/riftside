@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 /** The anchor on the spotlight section, so a click can pull the view to it. */
@@ -6,6 +8,27 @@ export const SPOTLIGHT_ANCHOR = "player-spotlight";
 /** Where a player's spotlight lives. One place, so the two ends agree. */
 export function spotlightUrl(name: string): string {
   return `/stats?player=${encodeURIComponent(name)}#${SPOTLIGHT_ANCHOR}`;
+}
+
+/**
+ * Glide to the spotlight rather than cutting to it, so it is clear the page
+ * moved rather than changed.
+ *
+ * The App Router scrolls to a hash itself, instantly, and overrides CSS
+ * `scroll-behavior: smooth` while it does — so the link turns Next's scroll
+ * off and does its own. Anyone who has asked their system for less motion
+ * still gets the cut.
+ */
+function glideToSpotlight() {
+  const target = document.getElementById(SPOTLIGHT_ANCHOR);
+  if (target === null) return;
+
+  const stillness = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  target.scrollIntoView({
+    behavior: stillness ? "auto" : "smooth",
+    block: "start",
+  });
 }
 
 /**
@@ -32,6 +55,11 @@ export function SpotlightLink({
   return (
     <Link
       href={spotlightUrl(name)}
+      // Next would jump to the anchor the moment the URL changes; this scrolls
+      // instead. The hash stays in the href so the link still works pasted
+      // into a fresh tab, where the browser does the scrolling.
+      scroll={false}
+      onClick={glideToSpotlight}
       title={`Put ${name} in the spotlight`}
       className={`underline decoration-ink-dim/40 underline-offset-2 transition-colors hover:text-gold hover:decoration-gold ${className}`}
     >
