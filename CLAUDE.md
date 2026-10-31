@@ -87,6 +87,26 @@ is public** — anyone can browse the roster, run the balancer and read history.
   no auth control at all; signed in, it shows Sign out. The page is `noindex`.
   Do not add a sign-in link back without asking.
 
+## Security headers
+
+`next.config.ts` sets a Content-Security-Policy and the usual companions on
+every response. Two things follow from it:
+
+- **Anything loaded from a new host has to be named there.** A font from
+  Google, an image CDN, an analytics script — the browser will block it
+  silently and the page will simply look wrong. `img-src` already names
+  Community Dragon for the champion portraits.
+- **Scripts and styles allow `unsafe-inline`**, because Next inlines its own
+  bootstrap and the theme script runs before React to stop a white flash. A
+  nonce would close that, but a nonce is per request, which makes every page
+  dynamic and costs the partial prerendering the site is built on. Nothing
+  here renders user-supplied HTML, so React's escaping is what carries that
+  risk.
+
+`frame-ancestors 'none'` is the one with teeth: a session lasts thirty days
+and every delete is one click behind it, which is what clickjacking is for.
+Vercel adds HSTS on top.
+
 ## Environment
 
 `.env.local` (git-ignored, pulled from the Vercel/Neon integration) holds many
