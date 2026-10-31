@@ -188,37 +188,6 @@ export function PlayerSpotlight({
           </div>
         </div>
 
-        {rival === null ? null : (
-          <div className="mb-4 grid gap-3 sm:grid-cols-2">
-            <Tile
-              label="Head to head"
-              value={
-                record === null || record.against.games === 0
-                  ? "—"
-                  : scoreOf(record.against, player.playerId, rival.playerId)
-              }
-              note={
-                record === null || record.against.games === 0
-                  ? "never on opposite sides"
-                  : `${record.against.games} game${record.against.games === 1 ? "" : "s"} against each other`
-              }
-            />
-            <Tile
-              label="As teammates"
-              value={
-                record === null || record.together.games === 0
-                  ? "—"
-                  : `${record.together.wins}W–${record.together.games - record.together.wins}L`
-              }
-              note={
-                record === null || record.together.games === 0
-                  ? "never on the same side"
-                  : `${record.together.games} game${record.together.games === 1 ? "" : "s"} together`
-              }
-            />
-          </div>
-        )}
-
         {/*
           A fixed first column rather than auto: the chart is a w-full svg,
           which an auto column sizes from nothing and squashes. Both columns
@@ -273,7 +242,8 @@ export function PlayerSpotlight({
                 />
               </div>
             ) : (
-              <dl className="divide-y divide-line overflow-hidden rounded-md border border-line">
+              <>
+                <dl className="divide-y divide-line overflow-hidden rounded-md border border-line">
                 <Facing label="Games" a={`${player.decided}`} b={`${rival.decided}`} />
                 <Facing
                   label="Win rate"
@@ -306,6 +276,36 @@ export function PlayerSpotlight({
                   better={compare(bestScore(player), bestScore(rival))}
                 />
               </dl>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Tile
+                    label="Head to head"
+                    value={
+                      record === null || record.against.games === 0
+                        ? "—"
+                        : scoreOf(record.against, player.playerId, rival.playerId)
+                    }
+                    note={
+                      record === null || record.against.games === 0
+                        ? "never on opposite sides"
+                        : `${record.against.games} game${record.against.games === 1 ? "" : "s"} against each other`
+                    }
+                  />
+                  <Tile
+                    label="As teammates"
+                    value={
+                      record === null || record.together.games === 0
+                        ? "—"
+                        : `${record.together.wins}W–${record.together.games - record.together.wins}L`
+                    }
+                    note={
+                      record === null || record.together.games === 0
+                        ? "never on the same side"
+                        : `${record.together.games} game${record.together.games === 1 ? "" : "s"} together`
+                    }
+                  />
+                </div>
+              </>
             )}
 
             {rival !== null || player.champions.length === 0 ? null : (
