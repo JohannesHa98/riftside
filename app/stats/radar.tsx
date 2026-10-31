@@ -239,7 +239,12 @@ export function Radar({
               <tspan
                 x={x}
                 dy={LINE_HEIGHT}
-                className="fill-ink text-[11px] font-semibold [font-variant-numeric:tabular-nums]"
+                // Gold once there is a second figure under it to tell apart;
+                // on its own it has nothing to be confused with, and plain
+                // ink reads stronger.
+                className={`text-[11px] font-semibold [font-variant-numeric:tabular-nums] ${
+                  context.rival ? "fill-gold" : "fill-ink"
+                }`}
               >
                 {formatAxis(axis.key, subject.raw[index])}
                 {subject.places?.[index] === undefined ? null : (
