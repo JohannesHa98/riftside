@@ -29,12 +29,21 @@ flattering themselves with a 100% from one win.
 ![The stats page ladder](docs/ladder.png)
 
 **One player against everyone else.** The gold shape is the player, the dashed
-one is the group's average. Someone who mostly plays support gets Vision in
-place of Farming, because CS says nothing about how they played. Pick a second
-player and it becomes a head to head: the record against each other, the
-record as teammates, and both shapes on one chart.
+one is the group's average, and each axis carries the figure and where it
+places among everyone measured the same way. Someone who mostly plays support
+gets Vision in place of Farming, because CS says nothing about how they
+played.
 
 ![The player spotlight, with a six-axis radar chart](docs/spotlight.png)
+
+**Two players against each other.** Pick a second and the panel becomes a head
+to head: how they have done against each other, how they have done as
+teammates, both shapes on one chart, and the figures facing each other with
+whoever leads each row picked out. Where the two are not measured the same way
+— a support's vision against a laner's CS — that axis is dropped rather than
+compared, leaving a five-sided chart.
+
+![Two players compared, with both shapes on one chart](docs/head-to-head.png)
 
 ## What it does
 
@@ -43,7 +52,7 @@ record as teammates, and both shapes on one chart.
 | **New game** | Pick ten players, get the three best team splits with suggested roles |
 | **Players** | The roster: a power level and a comfort level per role |
 | **History** | Past games, line-ups in role order, full scorelines |
-| **Stats** | The ladder, a per-player radar spotlight, and assorted records |
+| **Stats** | The ladder, a per-player radar spotlight, head to heads, and assorted records |
 
 Reading is public. Every write is behind a login.
 
@@ -106,13 +115,22 @@ counting those games quietly punished whoever filled. Someone who supports more
 often than not gets a Vision axis on their radar in place of Farming, scaled
 against the other supports rather than against laners' CS.
 
-**The radar is checked, not eyeballed.** It is an emphasis chart, not a
-categorical one: the player is the subject in the accent colour and the group
-average is recessive context, a dashed outline with no fill — so the two never
-depend on colour alone to be told apart. Every axis carries its own value as
-text, which means the shape is readable without comparing areas by eye. The
-palette went through a colour-blindness validator rather than a glance; an
-earlier version failed it and was replaced.
+**The radar changes type with its job.** Against the group it is an *emphasis*
+chart: the player is the subject in the accent colour and the average is
+recessive context, a dashed outline with no fill. Against another player it is
+a *categorical* one — two equals — so the second shape takes a hue of its own
+and the same weight. Either way the two never depend on colour alone to be
+told apart, and every axis carries its figure as text, so the shapes are
+readable without comparing areas by eye. Both palettes went through a
+colour-blindness validator rather than a glance; an earlier one failed it and
+was replaced.
+
+**The records behind a head to head are one pass over every game.** Ten
+players make forty-five pairs, so the work grows with games played rather than
+with the roster, and the whole table is handed to the browser — switching
+opponent costs no round trip. Only games with a recorded winner count towards
+a record: a 3-0 that quietly included two unfinished games would be worse than
+no record at all.
 
 **Auth is one password, not an auth provider.** scrypt for the hash, a signed
 JWT in an HttpOnly SameSite=Lax cookie, and a guard inside every mutating
