@@ -84,6 +84,14 @@ counting those games quietly punished whoever filled. Someone who supports more
 often than not gets a Vision axis on their radar in place of Farming, scaled
 against the other supports rather than against laners' CS.
 
+**The radar is checked, not eyeballed.** It is an emphasis chart, not a
+categorical one: the player is the subject in the accent colour and the group
+average is recessive context, a dashed outline with no fill — so the two never
+depend on colour alone to be told apart. Every axis carries its own value as
+text, which means the shape is readable without comparing areas by eye. The
+palette went through a colour-blindness validator rather than a glance; an
+earlier version failed it and was replaced.
+
 **Auth is one password, not an auth provider.** scrypt for the hash, a signed
 JWT in an HttpOnly SameSite=Lax cookie, and a guard inside every mutating
 server action — server actions are reachable by direct POST, so hiding a button

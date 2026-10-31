@@ -60,12 +60,12 @@ async function Table() {
         <table className="w-full min-w-136 text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs text-ink-dim uppercase">
-              <th className="w-10 px-2 py-2 text-center font-medium">#</th>
-              <th className="px-2 py-2 font-medium">Player</th>
-              <th className="px-2 py-2 text-center font-medium">Games</th>
-              <th className="px-2 py-2 text-center font-medium">Win rate</th>
-              <th className="px-2 py-2 text-center font-medium">KDA</th>
-              <th className="px-4 py-2 text-center font-medium">Most played</th>
+              <th scope="col" className="w-10 px-2 py-2 text-center font-medium">#</th>
+              <th scope="col" className="px-2 py-2 font-medium">Player</th>
+              <th scope="col" className="px-2 py-2 text-center font-medium">Games</th>
+              <th scope="col" className="px-2 py-2 text-center font-medium">Win rate</th>
+              <th scope="col" className="px-2 py-2 text-center font-medium">KDA</th>
+              <th scope="col" className="px-4 py-2 text-center font-medium">Most played</th>
             </tr>
           </thead>
 

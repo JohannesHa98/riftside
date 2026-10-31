@@ -39,6 +39,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="flex min-h-full flex-col font-sans">
+        {/*
+          First thing in the tab order, invisible until it is focused: a
+          keyboard user lands on it and can jump past the nav instead of
+          tabbing through it on every page.
+        */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:border focus:border-line focus:bg-raised focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-ink"
+        >
+          Skip to content
+        </a>
+
         <SiteNav
           sessionSlot={
             <Suspense fallback={null}>
@@ -46,7 +58,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </Suspense>
           }
         />
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
+        <main
+          id="main"
+          className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-10"
+        >
           {children}
         </main>
 
