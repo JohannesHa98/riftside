@@ -244,10 +244,13 @@ function Record({
                 className="size-5 shrink-0 rounded"
               />
             )}
-            <span className="truncate">
-              <SpotlightLink name={record.name} />
-              <span className="ml-1 text-xs text-ink-dim">{champion}</span>
-            </span>
+            {/*
+              Each of these truncates itself rather than sharing a clipping
+              parent: an overflow:hidden ancestor would cut the focus ring off
+              the link inside it, which leaves a sliver rather than a box.
+            */}
+            <SpotlightLink name={record.name} className="truncate" />
+            <span className="truncate text-xs text-ink-dim">{champion}</span>
           </span>
           <span className="font-medium tabular-nums">{format(record.value)}</span>
         </>

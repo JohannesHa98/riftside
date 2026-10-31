@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
 
-import { glideTo } from "./glide";
+import { glideTo } from "@/lib/glide";
 
 /** The anchor on the spotlight section, so a click can pull the view to it. */
 export const SPOTLIGHT_ANCHOR = "player-spotlight";

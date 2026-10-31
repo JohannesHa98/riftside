@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ComfortBadge } from "@/components/comfort-badge";
+import { glideTo } from "@/lib/glide";
 import { TeamCard } from "@/components/team-card";
 import {
   PLAYERS_PER_GAME,
@@ -26,11 +27,7 @@ export function TeamPicker({ roster }: { roster: BalancePlayer[] }) {
   // can leave them off-screen entirely. Bring them into view.
   useEffect(() => {
     if (chosen === null) return;
-
-    teamsRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
-      block: "start",
-    });
+    if (teamsRef.current !== null) glideTo(teamsRef.current);
   }, [chosen]);
 
   const selected = useMemo(
@@ -40,17 +37,12 @@ export function TeamPicker({ roster }: { roster: BalancePlayer[] }) {
 
   const ready = selected.length === PLAYERS_PER_GAME;
 
-  // On a phone the player list fills several screens, so the suggestions
-  // appear far below the tenth tick and it looks as though nothing happened.
-  // On a wider screen they are already in view, so leave the page alone.
+  // The player list is long enough that the suggestions sit below the fold
+  // on any screen, so ticking the tenth player looks as though nothing
+  // happened. Carry the page down to them instead.
   useEffect(() => {
     if (!ready) return;
-    if (!window.matchMedia("(max-width: 639px)").matches) return;
-
-    suggestionsRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
-      block: "start",
-    });
+    if (suggestionsRef.current !== null) glideTo(suggestionsRef.current);
   }, [ready]);
 
   // Pure and tiny (126 splits), so it runs here rather than on the server.
@@ -126,6 +118,15 @@ export function TeamPicker({ roster }: { roster: BalancePlayer[] }) {
                   checked={isSelected}
                   disabled={full}
                   onChange={() => toggle(player.id)}
+                  // A checkbox answers to Space, not Enter — which is the
+                  // platform's rule, not an expectation anyone has while
+                  // ticking their way down a list of ten names. Enter does
+                  // the same thing here; Space still works.
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" || full) return;
+                    event.preventDefault();
+                    toggle(player.id);
+                  }}
                   className="size-4 shrink-0 accent-gold"
                 />
 
@@ -216,10 +217,6 @@ export function TeamPicker({ roster }: { roster: BalancePlayer[] }) {
       ) : null}
     </div>
   );
-}
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function SuggestionRow({
