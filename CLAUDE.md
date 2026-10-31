@@ -82,6 +82,10 @@ is public** — anyone can browse the roster, run the balancer and read history.
   inside `ATTEMPT_WINDOW_MINUTES` locks an address out; a successful sign-in
   deletes its rows, and old rows are dropped on the next failure rather than
   by a scheduled job. Only the salted hash of an address is stored.
+- **The whole site is `noindex`** (`app/layout.tsx`). The pages carry real
+  names and Riot IDs, and everyone who needs the link has it. Done with a
+  meta tag, not a disallow-all robots.txt: a crawler told not to fetch a
+  page never reads the tag on it and can still list the bare URL.
 - **Nothing links to `/login`.** There is one account, so a sign-in link would
   only advertise the way in. Go to `/login` directly. Signed out, the nav shows
   no auth control at all; signed in, it shows Sign out. The page is `noindex`.

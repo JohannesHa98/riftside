@@ -23,6 +23,17 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Riftside",
   description: "Two even sides of the Rift for in-house League of Legends games.",
+  /*
+   * Kept out of search results. Nobody arrives here by searching — the link
+   * is passed to the people who play — and the pages carry real names and
+   * Riot IDs, which belong to the group rather than to Google.
+   *
+   * A meta tag rather than a robots.txt that disallows everything: a crawler
+   * told not to fetch a page never reads the tag on it, and can still list
+   * the bare URL it found elsewhere. Letting it read the page and be told
+   * "not this one" is what actually keeps it out.
+   */
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
