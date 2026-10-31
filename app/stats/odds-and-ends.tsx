@@ -219,17 +219,34 @@ function Record({
   champions: Map<number, string>;
   format?: (value: number) => string;
 }) {
+  const icon = record === null ? null : championIconUrl(record.championId);
+  const champion =
+    record === null ? null : championLabel(champions, record.championId);
+
   return (
-    <li className="flex items-baseline gap-2 text-sm">
+    <li className="flex items-center gap-2 text-sm">
       <span className="w-14 shrink-0 text-xs text-ink-dim">{label}</span>
       {record === null ? (
         <span className="text-ink-dim">—</span>
       ) : (
         <>
-          <span className="mr-auto truncate">
-            <SpotlightLink name={record.name} />
-            <span className="ml-1 text-xs text-ink-dim">
-              {championLabel(champions, record.championId)}
+          {/* The portrait leads the row, as it does in the champion cards, so
+              the squares line up down the column. */}
+          <span className="mr-auto flex min-w-0 items-center gap-1.5">
+            {icon === null ? null : (
+              <Image
+                src={icon}
+                // Decorative: the champion is named in the text beside it.
+                alt=""
+                width={20}
+                height={20}
+                unoptimized
+                className="size-5 shrink-0 rounded"
+              />
+            )}
+            <span className="truncate">
+              <SpotlightLink name={record.name} />
+              <span className="ml-1 text-xs text-ink-dim">{champion}</span>
             </span>
           </span>
           <span className="font-medium tabular-nums">{format(record.value)}</span>
