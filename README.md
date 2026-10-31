@@ -14,6 +14,26 @@ local API as the games finish, or they are lost.
 
 ---
 
+## A look at it
+
+**Pick the ten who are playing.** The number on the left is how good someone
+is overall; the roles beside each name are how happy they are to play there —
+Main, Fill or Never.
+
+![The new game page, with the roster and each player's role comfort](docs/new-game.png)
+
+**The ladder.** Win rate first, then more games at the same rate, then KDA.
+Anyone under five games with a recorded result is unranked rather than
+flattering themselves with a 100% from one win.
+
+![The stats page ladder](docs/ladder.png)
+
+**One player against everyone else.** The gold shape is the player, the dashed
+one is the group's average. Someone who mostly plays support gets Vision in
+place of Farming, because CS says nothing about how they played.
+
+![The player spotlight, with a six-axis radar chart](docs/spotlight.png)
+
 ## What it does
 
 | Page | |
