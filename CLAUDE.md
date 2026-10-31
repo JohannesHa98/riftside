@@ -246,7 +246,10 @@ app/
   login/       the one account
   api/ingest/  receives games from the companion app
 components/    shared UI (nav, cards, badges, primitives)
-db/            schema, client, queries, migrations
+db/            schema, client, migrations, and queries/ — a file per
+               subject (players, matches, ladder, fun-stats, spotlight,
+               login-attempts). db/queries.ts re-exports all of them, so
+               pages import from "@/db/queries" and never from inside
 lib/           types, balance, auth, ingest rules, champion names
 companion/     the Windows companion app (its own package)
 ```
