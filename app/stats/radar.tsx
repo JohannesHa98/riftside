@@ -1,4 +1,4 @@
-import type { PlayerProfile, SpotlightAxis } from "@/db/queries";
+import type { SpotlightAxis } from "@/db/queries";
 
 /** Formatting lives here rather than with the data, so the axes stay plain. */
 export function formatAxis(key: string, value: number): string {
@@ -43,30 +43,60 @@ function polygon(values: number[]): string {
     .join(" ");
 }
 
+/** The player the chart is about: scaled values, and what they really were. */
+export interface RadarSubject {
+  name: string;
+  /** One 0-1 value per axis. */
+  values: number[];
+  /** The same axes unscaled, for the labels. */
+  raw: number[];
+}
+
 /**
- * A six-axis radar: one player against the group's average shape.
+ * What the subject is read against: the group's average shape, or a second
+ * player. The two are drawn differently on purpose — see below.
+ */
+export interface RadarContext {
+  name: string;
+  values: number[];
+  /** True when this is another player rather than the group. */
+  rival: boolean;
+  raw?: number[];
+}
+
+/**
+ * One player's shape, drawn against something.
  *
- * This is an emphasis chart, not a categorical one — the player is the
- * subject in the accent colour and the group is recessive context, drawn as a
- * dashed outline with no fill. Every axis carries its own value as text, so
- * the chart is readable without comparing areas by eye and without hovering.
+ * Against the group's average this is an *emphasis* chart: the player is the
+ * subject in the accent colour and the group is recessive context, a dashed
+ * outline with no fill. Against another player it is a *categorical* one —
+ * two equals — so the second shape gets its own colour, checked against the
+ * first for colour blindness, and the same weight rather than being pushed
+ * into the background.
+ *
+ * Either way every axis carries its value as text, so the chart is readable
+ * without comparing areas by eye and without hovering.
  */
 export function Radar({
-  player,
-  average,
   axes,
+  subject,
+  context,
 }: {
-  player: PlayerProfile;
-  average: number[];
   axes: SpotlightAxis[];
+  subject: RadarSubject;
+  context: RadarContext;
 }) {
+  const described = context.rival
+    ? `${subject.name} against ${context.name}`
+    : `${subject.name}'s profile`;
+
   return (
     <figure className="m-0">
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         className="w-full max-w-80"
         role="img"
-        aria-label={`${player.name}'s profile across ${axes.map((a) => a.label).join(", ")}`}
+        aria-label={`${described} across ${axes.map((a) => a.label).join(", ")}`}
       >
         {RINGS.map((ring) => (
           <polygon
@@ -92,17 +122,21 @@ export function Radar({
           );
         })}
 
-        {/* The group first, so the player sits on top of it. */}
+        {/* The context first, so the subject sits on top of it. */}
         <polygon
-          points={polygon(average)}
-          className="fill-none stroke-chart-context"
+          points={polygon(context.values)}
+          className={
+            context.rival
+              ? "fill-chart-rival/15 stroke-chart-rival"
+              : "fill-none stroke-chart-context"
+          }
           strokeWidth={2}
-          strokeDasharray="5 4"
+          strokeDasharray={context.rival ? undefined : "5 4"}
           strokeLinejoin="round"
         />
 
         <polygon
-          points={polygon(player.radar)}
+          points={polygon(subject.values)}
           className="fill-gold/20 stroke-gold"
           strokeWidth={2}
           strokeLinejoin="round"
@@ -122,14 +156,23 @@ export function Radar({
                 dy="11"
                 className="fill-ink text-[11px] font-semibold [font-variant-numeric:tabular-nums]"
               >
-                {formatAxis(axis.key, player.raw[index])}
+                {formatAxis(axis.key, subject.raw[index])}
               </tspan>
+              {context.rival && context.raw !== undefined ? (
+                <tspan
+                  x={x}
+                  dy="11"
+                  className="fill-chart-rival text-[11px] font-semibold [font-variant-numeric:tabular-nums]"
+                >
+                  {formatAxis(axis.key, context.raw[index])}
+                </tspan>
+              ) : null}
             </text>
           );
         })}
 
-        {player.radar.map((value, index) => {
-          const { x, y } = pointAt(index, player.radar.length, value);
+        {subject.values.map((value, index) => {
+          const { x, y } = pointAt(index, subject.values.length, value);
           return (
             <circle
               key={axes[index].key}
@@ -142,24 +185,33 @@ export function Radar({
           );
         })}
       </svg>
-
     </figure>
   );
 }
 
-export function RadarLegend({ name }: { name: string }) {
+export function RadarLegend({
+  subject,
+  context,
+}: {
+  subject: string;
+  context: RadarContext;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-4 text-xs text-ink-dim">
       <span className="flex items-center gap-1.5">
-        <span className="h-0.5 w-5 rounded-full bg-gold" />
-        {name}
+        <span aria-hidden className="h-0.5 w-5 rounded-full bg-gold" />
+        {subject}
       </span>
       <span className="flex items-center gap-1.5">
-        <span
-          aria-hidden
-          className="w-5 border-t-2 border-dashed border-chart-context"
-        />
-        Everyone&rsquo;s average
+        {context.rival ? (
+          <span aria-hidden className="h-0.5 w-5 rounded-full bg-chart-rival" />
+        ) : (
+          <span
+            aria-hidden
+            className="w-5 border-t-2 border-dashed border-chart-context"
+          />
+        )}
+        {context.name}
       </span>
     </div>
   );

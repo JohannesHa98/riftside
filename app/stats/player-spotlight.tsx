@@ -6,46 +6,58 @@ import { useMemo, useState } from "react";
 
 import { PlayerName } from "@/components/player-name";
 import { inputStyles } from "@/components/ui";
-import type { ChampionRecord, GameHighlight, PlayerProfile } from "@/db/queries";
+import {
+  countsFor,
+  pairKey,
+  type ChampionRecord,
+  type GameHighlight,
+  type PairRecords,
+  type PlayerProfile,
+  type SpotlightAxis,
+} from "@/db/queries";
 
-import { Radar, RadarLegend } from "./radar";
+import { Radar, RadarLegend, type RadarContext } from "./radar";
 import { SPOTLIGHT_ANCHOR, spotlightUrl } from "./spotlight-link";
 
 /** How many champions the spotlight lists under "Plays most". */
 const CHAMPIONS_SHOWN = 10;
 
 /**
- * One player, picked by search or by a name elsewhere on the page, drawn
- * against the group.
+ * One player drawn against the group, or against another player.
  *
  * Everything the panel needs is handed over at once — a couple of dozen
- * players with a dozen numbers each — so switching player is instant and
- * needs no round trip.
+ * players with a dozen numbers each, plus every pair's record — so switching
+ * player or opponent is instant and needs no round trip.
  *
- * Who is shown lives in `?player=`, because the names in the ladder and the
- * odds and ends are rendered on the server in their own Suspense boundaries
- * and have no other way to reach this component's state. The search box sets
- * the same parameter, so there is one answer to who is selected, and a
- * spotlight can be linked to.
+ * Who is shown lives in `?player=` and `?against=`, because the names in the
+ * ladder and the odds and ends are rendered on the server in their own
+ * Suspense boundaries and have no other way to reach this component's state.
+ * The search boxes set the same parameters, so there is one answer to who is
+ * selected, and any comparison can be linked to.
  */
 export function PlayerSpotlight({
   players,
   average,
   champions,
+  pairs,
 }: {
   players: PlayerProfile[];
   average: number[];
   champions: Record<number, string>;
+  pairs: PairRecords;
 }) {
   const router = useRouter();
   const params = useSearchParams();
-  const [query, setQuery] = useState("");
+
+  const find = (name: string | null) => {
+    const needle = (name ?? "").toLocaleLowerCase();
+    if (needle.length === 0) return null;
+    return players.find((entry) => entry.name.toLocaleLowerCase() === needle) ?? null;
+  };
 
   // Matched without case, so a link somebody typed by hand still lands.
-  const asked = (params.get("player") ?? "").toLocaleLowerCase();
-  const fromUrl =
-    players.find((entry) => entry.name.toLocaleLowerCase() === asked)?.playerId ??
-    null;
+  const fromUrl = find(params.get("player"))?.playerId ?? null;
+  const rivalFromUrl = find(params.get("against"));
 
   // The search box selects before the URL has caught up, so its choice stands
   // until the parameter changes — at which point the URL wins again, which is
@@ -60,36 +72,32 @@ export function PlayerSpotlight({
 
   // Already sorted by ladder position, so the first is the player on top.
   const selectedId = picked ?? fromUrl ?? players[0]?.playerId ?? null;
-
-  const needle = query.trim().toLocaleLowerCase();
-
-  const matches = useMemo(() => {
-    if (needle.length === 0) return [];
-
-    return players
-      .filter((player) =>
-        `${player.name} ${player.riotId ?? ""}`.toLocaleLowerCase().includes(needle),
-      )
-      .slice(0, 6);
-  }, [players, needle]);
-
   const player = players.find((entry) => entry.playerId === selectedId) ?? null;
+
+  // Nobody is their own rival, however the URL was typed.
+  const rival =
+    rivalFromUrl !== null && rivalFromUrl.playerId !== selectedId ? rivalFromUrl : null;
 
   if (player === null) return null;
 
-  function choose(entry: PlayerProfile) {
-    setPicked(entry.playerId);
-    setQuery("");
+  function show(subject: PlayerProfile, against: PlayerProfile | null) {
+    setPicked(subject.playerId);
     // replace, not push: flicking through players should not fill the back
     // button with every one of them. scroll: false because the panel is
     // already in view — the search box that was just used is inside it.
-    router.replace(spotlightUrl(entry.name), { scroll: false });
+    router.replace(spotlightUrl(subject.name, against?.name ?? null), {
+      scroll: false,
+    });
   }
+
+  const record =
+    rival === null ? null : (pairs[pairKey(player.playerId, rival.playerId)] ?? null);
+  const view = comparable(player, rival, average);
 
   return (
     <section id={SPOTLIGHT_ANCHOR} className="mt-8 scroll-mt-4">
       <h2 className="mb-3 text-xs font-semibold text-ink-dim uppercase">
-        Player spotlight
+        {rival === null ? "Player spotlight" : "Head to head"}
       </h2>
 
       <div className="rounded-lg border border-line bg-panel p-4">
@@ -101,119 +109,174 @@ export function PlayerSpotlight({
                 riotId={player.riotId}
                 className="text-xl font-semibold"
               />
-              <span className="text-sm text-gold tabular-nums">{player.power}</span>
-              {player.rank !== null ? (
-                <span className="text-xs text-ink-dim">rank {player.rank}</span>
-              ) : (
-                <span className="text-xs text-ink-dim">unranked</span>
+              {rival === null ? null : (
+                <>
+                  <span className="text-sm text-ink-dim">v</span>
+                  <PlayerName
+                    name={rival.name}
+                    riotId={rival.riotId}
+                    className="text-xl font-semibold text-chart-rival"
+                  />
+                </>
+              )}
+              {rival !== null ? null : (
+                <>
+                  <span className="text-sm text-gold tabular-nums">{player.power}</span>
+                  {player.rank !== null ? (
+                    <span className="text-xs text-ink-dim">rank {player.rank}</span>
+                  ) : (
+                    <span className="text-xs text-ink-dim">unranked</span>
+                  )}
+                </>
               )}
             </p>
             <p className="mt-0.5 text-sm text-ink-dim">
-              {player.games} game{player.games === 1 ? "" : "s"}
-              {player.games > player.decided
-                ? ` · ${player.games - player.decided} unfinished`
-                : ""}
+              {rival === null ? (
+                <>
+                  {player.games} game{player.games === 1 ? "" : "s"}
+                  {player.games > player.decided
+                    ? ` · ${player.games - player.decided} unfinished`
+                    : ""}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => show(player, null)}
+                  className="underline decoration-ink-dim/40 underline-offset-2 hover:text-ink"
+                >
+                  Back to the spotlight
+                </button>
+              )}
             </p>
           </div>
 
-          <div className="relative sm:w-64">
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
+          <div className="flex flex-col gap-2 sm:w-64">
+            <PlayerSearch
+              players={players}
+              label="Search for a player to spotlight"
               placeholder="Search by name or Riot ID"
-              aria-label="Search for a player to spotlight"
-              className={inputStyles}
+              onPick={(entry) => show(entry, rival)}
             />
-
-            {matches.length > 0 ? (
-              <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-line bg-raised shadow-lg">
-                {matches.map((entry) => (
-                  <li key={entry.playerId}>
-                    <button
-                      type="button"
-                      onClick={() => choose(entry)}
-                      className="flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm hover:bg-panel"
-                    >
-                      <span className="mr-auto truncate">{entry.name}</span>
-                      {entry.riotId === null ? null : (
-                        <span className="truncate text-xs text-ink-dim">
-                          {entry.riotId}
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-
-            {needle.length > 0 && matches.length === 0 ? (
-              <p className="absolute mt-1 w-full rounded-md border border-line bg-raised px-3 py-2 text-sm text-ink-dim">
-                Nobody matches that.
-              </p>
-            ) : null}
+            <PlayerSearch
+              players={players.filter((entry) => entry.playerId !== player.playerId)}
+              label="Search for a player to compare with"
+              placeholder={rival === null ? "Compare with…" : `Comparing: ${rival.name}`}
+              onPick={(entry) => show(player, entry)}
+            />
           </div>
         </div>
+
+        {rival === null ? null : (
+          <div className="mb-4 grid gap-3 sm:grid-cols-2">
+            <Tile
+              label="Head to head"
+              value={
+                record === null || record.against.games === 0
+                  ? "—"
+                  : scoreOf(record.against, player.playerId, rival.playerId)
+              }
+              note={
+                record === null || record.against.games === 0
+                  ? "never on opposite sides"
+                  : `${record.against.games} game${record.against.games === 1 ? "" : "s"} against each other`
+              }
+            />
+            <Tile
+              label="As teammates"
+              value={
+                record === null || record.together.games === 0
+                  ? "—"
+                  : `${record.together.wins}W–${record.together.games - record.together.wins}L`
+              }
+              note={
+                record === null || record.together.games === 0
+                  ? "never on the same side"
+                  : `${record.together.games} game${record.together.games === 1 ? "" : "s"} together`
+              }
+            />
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
           <div>
             {/*
               The axes come from the player, not the page: someone who mostly
-              supports has vision in place of farming.
+              supports has vision in place of farming. Comparing two of those
+              keeps only the axes they share — see `comparable`.
             */}
-            <Radar player={player} average={average} axes={player.axes} />
-            <div className="mt-3">
-              <RadarLegend name={player.name} />
+            <Radar axes={view.axes} subject={view.subject} context={view.context} />
+            <div className="mt-3 space-y-1">
+              <RadarLegend subject={player.name} context={view.context} />
+              {view.dropped === null ? null : (
+                <p className="text-xs text-ink-dim">
+                  {view.dropped} is left off: they are not measured the same way
+                  for both of them.
+                </p>
+              )}
             </div>
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <Tile
-                label="Win rate"
-                value={
-                  player.decided === 0
-                    ? "—"
-                    : `${Math.round((player.wins / player.decided) * 100)}%`
-                }
-                note={`${player.wins}W–${player.decided - player.wins}L`}
-              />
-              <Tile
-                label="KDA"
-                value={player.kda === null ? "—" : player.kda.toFixed(1)}
-                note="kills + assists per death"
-              />
-              <Tile
-                label="Per game"
-                value={
-                  player.games === 0
-                    ? "—"
-                    : `${(player.kills / player.games).toFixed(1)}/${(player.deaths / player.games).toFixed(1)}/${(player.assists / player.games).toFixed(1)}`
-                }
-                note="K/D/A"
-              />
-              <Tile
-                label="Best game"
-                value={scoreline(player.best)}
-                note={championOf(player.best, champions)}
-              />
-              <Tile
-                label="Worst game"
-                value={scoreline(player.worst)}
-                note={championOf(player.worst, champions)}
-              />
-              <Tile
-                label="Kill participation"
-                value={
-                  player.killParticipation === null
-                    ? "—"
-                    : `${Math.round(player.killParticipation * 100)}%`
-                }
-                note="of their team's kills"
-              />
-            </div>
+            {rival === null ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <Tile
+                  label="Win rate"
+                  value={winRateOf(player)}
+                  note={`${player.wins}W–${player.decided - player.wins}L`}
+                />
+                <Tile
+                  label="KDA"
+                  value={player.kda === null ? "—" : player.kda.toFixed(1)}
+                  note="kills + assists per death"
+                />
+                <Tile label="Per game" value={perGameOf(player)} note="K/D/A" />
+                <Tile
+                  label="Best game"
+                  value={scoreline(player.best)}
+                  note={championOf(player.best, champions)}
+                />
+                <Tile
+                  label="Worst game"
+                  value={scoreline(player.worst)}
+                  note={championOf(player.worst, champions)}
+                />
+                <Tile
+                  label="Kill participation"
+                  value={participationOf(player)}
+                  note="of their team's kills"
+                />
+              </div>
+            ) : (
+              <dl className="divide-y divide-line overflow-hidden rounded-md border border-line">
+                <Facing label="Games" a={`${player.decided}`} b={`${rival.decided}`} />
+                <Facing
+                  label="Win rate"
+                  a={winRateOf(player)}
+                  b={winRateOf(rival)}
+                  better={compare(rateOf(player), rateOf(rival))}
+                />
+                <Facing
+                  label="KDA"
+                  a={player.kda === null ? "—" : player.kda.toFixed(1)}
+                  b={rival.kda === null ? "—" : rival.kda.toFixed(1)}
+                  better={compare(player.kda, rival.kda)}
+                />
+                <Facing label="Per game" a={perGameOf(player)} b={perGameOf(rival)} />
+                <Facing
+                  label="Kill participation"
+                  a={participationOf(player)}
+                  b={participationOf(rival)}
+                  better={compare(player.killParticipation, rival.killParticipation)}
+                />
+                <Facing
+                  label="Best game"
+                  a={scoreline(player.best)}
+                  b={scoreline(rival.best)}
+                />
+              </dl>
+            )}
 
-            {player.champions.length > 0 ? (
+            {rival !== null || player.champions.length === 0 ? null : (
               <div>
                 <h3 className="mb-2 text-xs font-semibold text-ink-dim uppercase">
                   Plays most
@@ -248,11 +311,196 @@ export function PlayerSpotlight({
                   ))}
                 </ul>
               </div>
-            ) : null}
+            )}
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * The axes two players can honestly be drawn on together.
+ *
+ * Someone who mostly supports spends the fourth slot on vision while everyone
+ * else spends it on CS, and the two are scaled against different groups. Shown
+ * side by side they would read as a comparison, so that axis comes out and the
+ * chart says why.
+ */
+function comparable(
+  player: PlayerProfile,
+  rival: PlayerProfile | null,
+  average: number[],
+): {
+  axes: SpotlightAxis[];
+  subject: { name: string; values: number[]; raw: number[] };
+  context: RadarContext;
+  dropped: string | null;
+} {
+  if (rival === null) {
+    return {
+      axes: player.axes,
+      subject: { name: player.name, values: player.radar, raw: player.raw },
+      context: { name: "Everyone's average", values: average, rival: false },
+      dropped: null,
+    };
+  }
+
+  const shared = player.axes
+    .map((axis, index) => index)
+    .filter((index) => player.axes[index].key === rival.axes[index].key);
+
+  const odd = player.axes.filter((_, index) => !shared.includes(index));
+
+  return {
+    axes: shared.map((index) => player.axes[index]),
+    subject: {
+      name: player.name,
+      values: shared.map((index) => player.radar[index]),
+      raw: shared.map((index) => player.raw[index]),
+    },
+    context: {
+      name: rival.name,
+      values: shared.map((index) => rival.radar[index]),
+      raw: shared.map((index) => rival.raw[index]),
+      rival: true,
+    },
+    dropped: odd.length === 0 ? null : odd.map((axis) => axis.label).join(" and "),
+  };
+}
+
+/** A head-to-head score, always read left to right as the panel shows it. */
+function scoreOf(
+  against: { games: number; wins: number },
+  player: number,
+  rival: number,
+): string {
+  const wins = countsFor(player, rival) ? against.wins : against.games - against.wins;
+  return `${wins}–${against.games - wins}`;
+}
+
+const rateOf = (p: PlayerProfile) => (p.decided === 0 ? null : p.wins / p.decided);
+
+function winRateOf(p: PlayerProfile): string {
+  const rate = rateOf(p);
+  return rate === null ? "—" : `${Math.round(rate * 100)}%`;
+}
+
+function perGameOf(p: PlayerProfile): string {
+  if (p.games === 0) return "—";
+  return `${(p.kills / p.games).toFixed(1)}/${(p.deaths / p.games).toFixed(1)}/${(p.assists / p.games).toFixed(1)}`;
+}
+
+function participationOf(p: PlayerProfile): string {
+  return p.killParticipation === null
+    ? "—"
+    : `${Math.round(p.killParticipation * 100)}%`;
+}
+
+/** Which side of a facing row is ahead, when the question has an answer. */
+function compare(a: number | null, b: number | null): "a" | "b" | null {
+  if (a === null || b === null || a === b) return null;
+  return a > b ? "a" : "b";
+}
+
+function PlayerSearch({
+  players,
+  label,
+  placeholder,
+  onPick,
+}: {
+  players: PlayerProfile[];
+  label: string;
+  placeholder: string;
+  onPick: (player: PlayerProfile) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLocaleLowerCase();
+
+  const matches = useMemo(() => {
+    if (needle.length === 0) return [];
+
+    return players
+      .filter((player) =>
+        `${player.name} ${player.riotId ?? ""}`.toLocaleLowerCase().includes(needle),
+      )
+      .slice(0, 6);
+  }, [players, needle]);
+
+  return (
+    <div className="relative">
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={placeholder}
+        aria-label={label}
+        className={inputStyles}
+      />
+
+      {matches.length > 0 ? (
+        <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border border-line bg-raised shadow-lg">
+          {matches.map((entry) => (
+            <li key={entry.playerId}>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  onPick(entry);
+                }}
+                className="flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm hover:bg-panel"
+              >
+                <span className="mr-auto truncate">{entry.name}</span>
+                {entry.riotId === null ? null : (
+                  <span className="truncate text-xs text-ink-dim">{entry.riotId}</span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {needle.length > 0 && matches.length === 0 ? (
+        <p className="absolute mt-1 w-full rounded-md border border-line bg-raised px-3 py-2 text-sm text-ink-dim">
+          Nobody matches that.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** One stat, both players, the label between them. */
+function Facing({
+  label,
+  a,
+  b,
+  better,
+}: {
+  label: string;
+  a: string;
+  b: string;
+  better?: "a" | "b" | null;
+}) {
+  const side = (value: string, mine: "a" | "b") => {
+    const ahead = better === mine;
+    const colour = mine === "a" ? "text-gold" : "text-chart-rival";
+    return (
+      <dd
+        className={`tabular-nums ${mine === "a" ? "text-right" : "text-left"} ${
+          ahead ? `font-semibold ${colour}` : "text-ink"
+        }`}
+      >
+        {value}
+      </dd>
+    );
+  };
+
+  return (
+    <div className="grid grid-cols-[1fr_auto_1fr] items-baseline gap-3 px-3 py-2 text-sm">
+      {side(a, "a")}
+      <dt className="text-center text-xs text-ink-dim uppercase">{label}</dt>
+      {side(b, "b")}
+    </div>
   );
 }
 

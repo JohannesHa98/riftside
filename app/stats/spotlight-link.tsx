@@ -9,9 +9,13 @@ import { glideTo } from "@/lib/glide";
 /** The anchor on the spotlight section, so a click can pull the view to it. */
 export const SPOTLIGHT_ANCHOR = "player-spotlight";
 
-/** Where a player's spotlight lives. One place, so the two ends agree. */
-export function spotlightUrl(name: string): string {
-  return `/stats?player=${encodeURIComponent(name)}`;
+/**
+ * Where a player's spotlight lives, and who they are being compared with.
+ * One place, so the two ends agree.
+ */
+export function spotlightUrl(name: string, against?: string | null): string {
+  const url = `/stats?player=${encodeURIComponent(name)}`;
+  return against ? `${url}&against=${encodeURIComponent(against)}` : url;
 }
 
 /** The same, with the anchor — for a link that is opened rather than clicked. */

@@ -224,7 +224,12 @@ site gets opened for.
 2. **Players** — list, add, edit, delete players with power level and per-role comfort
 3. **History** — past games, and deleting one
 4. **Stats** — the ladder, odds and ends, and a per-player spotlight with a
-   radar. Every name on this page puts that player in the spotlight rather
+   radar, which becomes a head to head when a second player is chosen
+   (`?against=`): their record against each other, their record as
+   teammates, both shapes on one chart and the stats facing each other.
+   An axis the two are not measured on the same way — farming against
+   vision — is left out rather than compared. Every name on this page puts
+   that player in the spotlight rather
    than leaving the site: the selection lives in `?player=<name>`, which is how a
    name rendered on the server in its own Suspense boundary reaches the
    spotlight's client state. The one name that still links to dpm.lol is the

@@ -8,6 +8,7 @@ import {
   countMatchesWithoutWinner,
   isRanked,
   kdaRatio,
+  pairRecords,
   playerStats,
   spotlight,
   winRate,
@@ -111,7 +112,11 @@ function withRanks(stats: PlayerStats[]): Array<{
 }
 
 async function Spotlight() {
-  const [data, names] = await Promise.all([spotlight(), championNames()]);
+  const [data, names, pairs] = await Promise.all([
+    spotlight(),
+    championNames(),
+    pairRecords(),
+  ]);
 
   if (data.players.length === 0) return null;
 
@@ -123,6 +128,7 @@ async function Spotlight() {
       players={data.players}
       average={data.average}
       champions={champions}
+      pairs={pairs}
     />
   );
 }

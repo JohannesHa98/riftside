@@ -30,7 +30,9 @@ flattering themselves with a 100% from one win.
 
 **One player against everyone else.** The gold shape is the player, the dashed
 one is the group's average. Someone who mostly plays support gets Vision in
-place of Farming, because CS says nothing about how they played.
+place of Farming, because CS says nothing about how they played. Pick a second
+player and it becomes a head to head: the record against each other, the
+record as teammates, and both shapes on one chart.
 
 ![The player spotlight, with a six-axis radar chart](docs/spotlight.png)
 

@@ -10,5 +10,6 @@ export * from "./queries/matches";
 export * from "./queries/shared";
 export * from "./queries/ladder";
 export * from "./queries/fun-stats";
-export * from "./queries/spotlight";
+export * from "./queries/spotlight";
+export * from "./queries/head-to-head";
 export * from "./queries/login-attempts";
