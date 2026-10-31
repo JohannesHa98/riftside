@@ -111,12 +111,29 @@ export function PlayerSpotlight({
               />
               {rival === null ? null : (
                 <>
-                  <span className="text-sm text-ink-dim">v</span>
+                  <span aria-hidden className="text-xl text-ink-dim">
+                    &ndash;
+                  </span>
                   <PlayerName
                     name={rival.name}
                     riotId={rival.riotId}
                     className="text-xl font-semibold text-blue-side"
                   />
+                  <button
+                    type="button"
+                    onClick={() => show(player, null)}
+                    title={`Stop comparing with ${rival.name}`}
+                    aria-label={`Stop comparing with ${rival.name}`}
+                    className="-ml-0.5 grid size-5 place-items-center self-center rounded-full text-ink-dim transition-colors hover:bg-raised hover:text-ink"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      aria-hidden
+                      className="size-3 fill-none stroke-current stroke-[3]"
+                    >
+                      <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                  </button>
                 </>
               )}
               {rival !== null ? null : (
@@ -130,24 +147,14 @@ export function PlayerSpotlight({
                 </>
               )}
             </p>
-            <p className="mt-0.5 text-sm text-ink-dim">
-              {rival === null ? (
-                <>
-                  {player.games} game{player.games === 1 ? "" : "s"}
-                  {player.games > player.decided
-                    ? ` · ${player.games - player.decided} unfinished`
-                    : ""}
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => show(player, null)}
-                  className="underline decoration-ink-dim/40 underline-offset-2 hover:text-ink"
-                >
-                  Back to the spotlight
-                </button>
-              )}
-            </p>
+            {rival !== null ? null : (
+              <p className="mt-0.5 text-sm text-ink-dim">
+                {player.games} game{player.games === 1 ? "" : "s"}
+                {player.games > player.decided
+                  ? ` · ${player.games - player.decided} unfinished`
+                  : ""}
+              </p>
+            )}
           </div>
 
           {/*
@@ -156,19 +163,21 @@ export function PlayerSpotlight({
           */}
           <div className="grid gap-2 sm:w-[26rem] sm:grid-cols-2">
             <PlayerSearch
-              players={players.filter((entry) => entry.playerId !== player.playerId)}
-              label="Search for a player to compare with"
-              placeholder={rival === null ? "Compare with…" : `v ${rival.name}`}
-              onPick={(entry) => show(player, entry)}
-            />
-            <PlayerSearch
               players={players}
               label="Search for a player to spotlight"
               placeholder="Search a player"
               onPick={(entry) => show(entry, rival)}
-              // Stacked on a phone, where the one that picks the subject
-              // belongs on top.
-              className="max-sm:order-first"
+            />
+            {/*
+              Always "Compare with", never the current opponent: a box that
+              names what it holds reads as a field someone has filled in, and
+              this one is empty — typing in it replaces them.
+            */}
+            <PlayerSearch
+              players={players.filter((entry) => entry.playerId !== player.playerId)}
+              label="Search for a player to compare with"
+              placeholder="Compare with…"
+              onPick={(entry) => show(player, entry)}
             />
           </div>
         </div>
@@ -421,13 +430,11 @@ function PlayerSearch({
   label,
   placeholder,
   onPick,
-  className = "",
 }: {
   players: PlayerProfile[];
   label: string;
   placeholder: string;
   onPick: (player: PlayerProfile) => void;
-  className?: string;
 }) {
   const [query, setQuery] = useState("");
   const needle = query.trim().toLocaleLowerCase();
@@ -443,7 +450,7 @@ function PlayerSearch({
   }, [players, needle]);
 
   return (
-    <div className={`relative ${className}`}>
+    <div className="relative">
       <input
         type="search"
         value={query}
