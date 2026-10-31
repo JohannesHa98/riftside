@@ -46,7 +46,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         */}
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:border focus:border-line focus:bg-raised focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-ink"
+          // fixed! because globals.css gives every :focus-visible element
+          // position: relative to lift its ring above its neighbours. Without
+          // the override this link joins the layout when focused, pushing the
+          // header down and shoving the page sideways by its own offset.
+          className="sr-only focus:not-sr-only focus:fixed! focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:border focus:border-line focus:bg-raised focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-ink"
         >
           Skip to content
         </a>
