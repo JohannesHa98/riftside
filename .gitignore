@@ -45,6 +45,3 @@ next-env.d.ts
 
 # ...but the template, which holds no values, belongs in the repo.
 !.env.example
-
-# Interview notes, mine, not part of the project.
-STUDY-NOTES.md
