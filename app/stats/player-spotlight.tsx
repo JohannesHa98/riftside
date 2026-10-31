@@ -153,20 +153,15 @@ export function PlayerSpotlight({
                 </>
               )}
             </p>
+            {/*
+              Kept in both: without it the panel would be a line shorter when
+              comparing, and choosing an opponent would shift the page.
+            */}
             <p className="mt-0.5 text-sm text-ink-dim">
               {player.games} game{player.games === 1 ? "" : "s"}
-              {rival === null ? (
-                player.games > player.decided ? (
-                  ` · ${player.games - player.decided} unfinished`
-                ) : null
-              ) : (
-                <>
-                  {" · "}
-                  <span className="text-blue-side/70">
-                    {rival.name} {rival.games}
-                  </span>
-                </>
-              )}
+              {player.games > player.decided
+                ? ` · ${player.games - player.decided} unfinished`
+                : ""}
             </p>
           </div>
 
@@ -280,6 +275,7 @@ export function PlayerSpotlight({
                 </div>
 
                 <dl className="divide-y divide-line overflow-hidden rounded-md border border-line">
+                <Facing label="Games" a={`${player.decided}`} b={`${rival.decided}`} />
                 <Facing
                   label="Win rate"
                   a={winRateOf(player)}
