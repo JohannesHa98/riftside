@@ -154,7 +154,7 @@ a repeat visitor, not to know who they are.
   scrolls inside its own box rather than pushing the page sideways
 - **Neon Postgres** via `@neondatabase/serverless`
 - **Drizzle ORM** with tracked SQL migrations (`drizzle-kit generate`, never `push`)
-- **Vitest** — 100 tests over the balancer, ingest rules, role assignment, auth, hashing and the companion's parser
+- **Vitest** — 110 tests over the balancer, ingest rules, role assignment, sign-in throttling, auth, hashing and the companion's parser
 - **Vercel** — pushing to `master` deploys
 - Companion: **Node 24** running TypeScript directly by type-stripping, one runtime dependency (`ws`)
 
