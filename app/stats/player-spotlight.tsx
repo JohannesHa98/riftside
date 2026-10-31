@@ -115,7 +115,7 @@ export function PlayerSpotlight({
                   <PlayerName
                     name={rival.name}
                     riotId={rival.riotId}
-                    className="text-xl font-semibold text-chart-rival"
+                    className="text-xl font-semibold text-blue-side"
                   />
                 </>
               )}
@@ -150,18 +150,25 @@ export function PlayerSpotlight({
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:w-64">
-            <PlayerSearch
-              players={players}
-              label="Search for a player to spotlight"
-              placeholder="Search by name or Riot ID"
-              onPick={(entry) => show(entry, rival)}
-            />
+          {/*
+            Side by side, not stacked: two full-width boxes above the chart
+            pushed the whole panel down the page for no reason.
+          */}
+          <div className="grid gap-2 sm:w-[26rem] sm:grid-cols-2">
             <PlayerSearch
               players={players.filter((entry) => entry.playerId !== player.playerId)}
               label="Search for a player to compare with"
-              placeholder={rival === null ? "Compare with…" : `Comparing: ${rival.name}`}
+              placeholder={rival === null ? "Compare with…" : `v ${rival.name}`}
               onPick={(entry) => show(player, entry)}
+            />
+            <PlayerSearch
+              players={players}
+              label="Search for a player to spotlight"
+              placeholder="Search a player"
+              onPick={(entry) => show(entry, rival)}
+              // Stacked on a phone, where the one that picks the subject
+              // belongs on top.
+              className="max-sm:order-first"
             />
           </div>
         </div>
@@ -197,7 +204,13 @@ export function PlayerSpotlight({
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
+        <div
+          className={`grid gap-6 lg:grid-cols-[auto_1fr] ${
+            // Six rows of figures are shorter than the chart, so centring them
+            // reads as deliberate where top-aligning reads as a mistake.
+            rival === null ? "" : "lg:items-center"
+          }`}
+        >
           <div>
             {/*
               The axes come from the player, not the page: someone who mostly
@@ -408,11 +421,13 @@ function PlayerSearch({
   label,
   placeholder,
   onPick,
+  className = "",
 }: {
   players: PlayerProfile[];
   label: string;
   placeholder: string;
   onPick: (player: PlayerProfile) => void;
+  className?: string;
 }) {
   const [query, setQuery] = useState("");
   const needle = query.trim().toLocaleLowerCase();
@@ -428,7 +443,7 @@ function PlayerSearch({
   }, [players, needle]);
 
   return (
-    <div className="relative">
+    <div className={`relative ${className}`}>
       <input
         type="search"
         value={query}
@@ -483,7 +498,7 @@ function Facing({
 }) {
   const side = (value: string, mine: "a" | "b") => {
     const ahead = better === mine;
-    const colour = mine === "a" ? "text-gold" : "text-chart-rival";
+    const colour = mine === "a" ? "text-gold" : "text-blue-side";
     return (
       <dd
         className={`tabular-nums ${mine === "a" ? "text-right" : "text-left"} ${

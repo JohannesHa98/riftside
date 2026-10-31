@@ -30,14 +30,6 @@
    * protanopia, and both clear 3:1 contrast.
    */
   --color-chart-context: #5f6b7e;
-
-  /*
-   * The second player when two are compared. That chart is categorical —
-   * two equals — rather than a subject against context, so this is a hue of
-   * its own instead of a de-emphasis grey. Against the gold it separates by
-   * dE 23.2 for normal vision and 21.3 under protanopia, both well clear.
-   */
-  --color-chart-rival: #6aa6ff;
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -98,8 +90,6 @@ html {
    * with its own value rather than relying on the shape alone.
    */
   --color-chart-context: #98a3b5;
-  /* dE 25.6 normal, 25.0 protan against the light gold. */
-  --color-chart-rival: #2f6fd0;
 
   color-scheme: light;
 }

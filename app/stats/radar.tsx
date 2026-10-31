@@ -24,6 +24,8 @@ const RADIUS = 88;
 /** Where the axis labels sit, just outside the outer ring. */
 const LABEL_DISTANCE = 1.18;
 const RINGS = [0.25, 0.5, 0.75, 1];
+/** One line of label text, in viewBox units. */
+const LINE_HEIGHT = 11;
 
 function pointAt(axis: number, count: number, distance: number) {
   // Start at the top and go clockwise.
@@ -127,7 +129,7 @@ export function Radar({
           points={polygon(context.values)}
           className={
             context.rival
-              ? "fill-chart-rival/15 stroke-chart-rival"
+              ? "fill-blue-side/15 stroke-blue-side"
               : "fill-none stroke-chart-context"
           }
           strokeWidth={2}
@@ -147,13 +149,23 @@ export function Radar({
           // Anchor by which side of the circle the label is on, so nothing
           // runs back over the chart.
           const anchor = x < CENTRE - 1 ? "end" : x > CENTRE + 1 ? "start" : "middle";
+          // A label above the chart grows downwards, towards it. Comparing two
+          // players adds a second line, so those labels start a line higher
+          // and the numbers stay outside the rings.
+          const lift = context.rival && y < CENTRE ? LINE_HEIGHT : 0;
 
           return (
-            <text key={axis.key} x={x} y={y} textAnchor={anchor} className="text-[9px]">
+            <text
+              key={axis.key}
+              x={x}
+              y={y - lift}
+              textAnchor={anchor}
+              className="text-[9px]"
+            >
               <tspan className="fill-ink-dim uppercase">{axis.label}</tspan>
               <tspan
                 x={x}
-                dy="11"
+                dy={LINE_HEIGHT}
                 className="fill-ink text-[11px] font-semibold [font-variant-numeric:tabular-nums]"
               >
                 {formatAxis(axis.key, subject.raw[index])}
@@ -161,8 +173,8 @@ export function Radar({
               {context.rival && context.raw !== undefined ? (
                 <tspan
                   x={x}
-                  dy="11"
-                  className="fill-chart-rival text-[11px] font-semibold [font-variant-numeric:tabular-nums]"
+                  dy={LINE_HEIGHT}
+                  className="fill-blue-side text-[11px] font-semibold [font-variant-numeric:tabular-nums]"
                 >
                   {formatAxis(axis.key, context.raw[index])}
                 </tspan>
@@ -204,7 +216,7 @@ export function RadarLegend({
       </span>
       <span className="flex items-center gap-1.5">
         {context.rival ? (
-          <span aria-hidden className="h-0.5 w-5 rounded-full bg-chart-rival" />
+          <span aria-hidden className="h-0.5 w-5 rounded-full bg-blue-side" />
         ) : (
           <span
             aria-hidden
