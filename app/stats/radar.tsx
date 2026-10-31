@@ -19,28 +19,45 @@ export function formatAxis(key: string, value: number): string {
 }
 
 /*
- * The drawing is wider than it is tall-looking: the rings only take the
- * middle, and the rest is room for labels that now carry a figure and its
- * placing, centred, on both sides of the chart.
+ * Wider than it is tall: the rings take the middle, and the rest is room for
+ * labels carrying a figure and its placing.
  */
-const SIZE = 340;
-const CENTRE = SIZE / 2;
+const WIDTH = 380;
+const HEIGHT = 320;
+const CENTRE_X = WIDTH / 2;
+const CENTRE_Y = HEIGHT / 2;
 const RADIUS = 88;
 /**
- * Where the axis labels sit. Far enough out that a centred label clears the
- * outer ring on both sides — they used to hug the ring and hang off one edge.
+ * How far out the labels sit — further sideways than up and down, because a
+ * centred label is wide and only a few lines tall. One distance for both
+ * would have to clear the widest label, which leaves the ones above and below
+ * the chart stranded miles from the axis they belong to.
  */
-const LABEL_DISTANCE = 1.32;
+const LABEL_SPREAD_X = 1.65;
+const LABEL_SPREAD_Y = 1.25;
 const RINGS = [0.25, 0.5, 0.75, 1];
 /** One line of label text, in viewBox units. */
 const LINE_HEIGHT = 11;
 
+/** Start at the top and go clockwise. */
+function angleOf(axis: number, count: number): number {
+  return (Math.PI * 2 * axis) / count - Math.PI / 2;
+}
+
 function pointAt(axis: number, count: number, distance: number) {
-  // Start at the top and go clockwise.
-  const angle = (Math.PI * 2 * axis) / count - Math.PI / 2;
+  const angle = angleOf(axis, count);
   return {
-    x: CENTRE + Math.cos(angle) * RADIUS * distance,
-    y: CENTRE + Math.sin(angle) * RADIUS * distance,
+    x: CENTRE_X + Math.cos(angle) * RADIUS * distance,
+    y: CENTRE_Y + Math.sin(angle) * RADIUS * distance,
+  };
+}
+
+/** Where an axis's label sits: off an ellipse rather than off the rings. */
+function labelAt(axis: number, count: number) {
+  const angle = angleOf(axis, count);
+  return {
+    x: CENTRE_X + Math.cos(angle) * RADIUS * LABEL_SPREAD_X,
+    y: CENTRE_Y + Math.sin(angle) * RADIUS * LABEL_SPREAD_Y,
   };
 }
 
@@ -106,7 +123,7 @@ export function Radar({
   return (
     <figure className="m-0">
       <svg
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="w-full max-w-96"
         role="img"
         aria-label={`${described} across ${axes.map((a) => a.label).join(", ")}`}
@@ -125,8 +142,8 @@ export function Radar({
           return (
             <line
               key={axis.key}
-              x1={CENTRE}
-              y1={CENTRE}
+              x1={CENTRE_X}
+              y1={CENTRE_Y}
               x2={x}
               y2={y}
               className="stroke-line"
@@ -156,11 +173,11 @@ export function Radar({
         />
 
         {axes.map((axis, index) => {
-          const { x, y } = pointAt(index, axes.length, LABEL_DISTANCE);
+          const { x, y } = labelAt(index, axes.length);
           // A label above the chart grows downwards, towards it. Comparing two
           // players adds a second line, so those labels start a line higher
           // and the numbers stay outside the rings.
-          const lift = context.rival && y < CENTRE ? LINE_HEIGHT : 0;
+          const lift = context.rival && y < CENTRE_Y ? LINE_HEIGHT : 0;
 
           return (
             <text
