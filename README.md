@@ -43,7 +43,7 @@ whoever leads each row picked out. Where the two are not measured the same way
 — a support's vision against a laner's CS — that axis is dropped rather than
 compared, leaving a five-sided chart.
 
-![Two players compared, with both shapes on one chart](docs/head-to-head.png)
+![Esox and Splurrp compared, with both shapes on one chart](docs/head-to-head.png)
 
 ## What it does
 
@@ -148,6 +148,11 @@ a repeat visitor, not to know who they are.
 
 - **Next.js 16** (App Router) + **React 19** + **TypeScript** in strict mode
 - **Tailwind CSS v4**, dark by default, light theme opt-in through CSS tokens
+- **Built for a phone first**, because that is where it gets used — half the
+  group picks their roles on the sofa. The nav folds into a burger, line-ups
+  stack rather than scrolling sideways, the role badges drop below the names,
+  and the one genuinely wide thing — the ladder — scrolls inside its own box
+  so the page itself never moves sideways
 - **Neon Postgres** via `@neondatabase/serverless`
 - **Drizzle ORM** with tracked SQL migrations (`drizzle-kit generate`, never `push`)
 - **Vitest** — 100 tests over the balancer, ingest rules, role assignment, auth, hashing and the companion's parser
