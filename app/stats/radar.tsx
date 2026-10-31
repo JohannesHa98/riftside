@@ -27,14 +27,10 @@ const HEIGHT = 320;
 const CENTRE_X = WIDTH / 2;
 const CENTRE_Y = HEIGHT / 2;
 const RADIUS = 88;
-/**
- * How far out the labels sit — further sideways than up and down, because a
- * centred label is wide and only a few lines tall. One distance for both
- * would have to clear the widest label, which leaves the ones above and below
- * the chart stranded miles from the axis they belong to.
- */
-const LABEL_SPREAD_X = 1.65;
-const LABEL_SPREAD_Y = 1.25;
+/** The gap every label keeps from the outer ring, whatever its size. */
+const LABEL_GAP = 14;
+/** Roughly how wide a character is at the size the figures are set in. */
+const CHAR_WIDTH = 5.9;
 const RINGS = [0.25, 0.5, 0.75, 1];
 /** One line of label text, in viewBox units. */
 const LINE_HEIGHT = 11;
@@ -52,12 +48,37 @@ function pointAt(axis: number, count: number, distance: number) {
   };
 }
 
-/** Where an axis's label sits: off an ellipse rather than off the rings. */
-function labelAt(axis: number, count: number) {
+/**
+ * Where an axis's label sits — pushed out by its own size, so every one of
+ * them keeps the same gap from the rings.
+ *
+ * A label is centred on its axis, which means half of it points back at the
+ * chart: a wide one needs to stand further off than a narrow one, and one
+ * above the chart needs less room than one beside it, because it is only a
+ * few lines tall. Both fall out of projecting the label's own half-width and
+ * half-height onto the direction its axis runs in.
+ */
+function labelAt(axis: number, count: number, lines: string[]) {
   const angle = angleOf(axis, count);
+
+  const widest = Math.max(...lines.map((line) => line.length));
+  const halfWidth = (widest * CHAR_WIDTH) / 2;
+  const halfHeight = (lines.length * LINE_HEIGHT) / 2;
+
+  const reach =
+    RADIUS +
+    LABEL_GAP +
+    Math.abs(Math.cos(angle)) * halfWidth +
+    // A line of text is shorter than the leading it sits in.
+    Math.abs(Math.sin(angle)) * halfHeight * 0.85;
+
+  // The text block grows downwards from its first baseline, so lift it by
+  // half its height to centre it on the point.
+  const centreY = CENTRE_Y + Math.sin(angle) * reach;
+
   return {
-    x: CENTRE_X + Math.cos(angle) * RADIUS * LABEL_SPREAD_X,
-    y: CENTRE_Y + Math.sin(angle) * RADIUS * LABEL_SPREAD_Y,
+    x: CENTRE_X + Math.cos(angle) * reach,
+    y: centreY - halfHeight + LINE_HEIGHT,
   };
 }
 
@@ -173,20 +194,18 @@ export function Radar({
         />
 
         {axes.map((axis, index) => {
-          const { x, y } = labelAt(index, axes.length);
-          // A label above the chart grows downwards, towards it. Comparing two
-          // players adds a second line, so those labels start a line higher
-          // and the numbers stay outside the rings.
-          const lift = context.rival && y < CENTRE_Y ? LINE_HEIGHT : 0;
+          // Every line the label will hold, so it can be placed by its size.
+          const lines = [
+            axis.label,
+            formatAxis(axis.key, subject.raw[index]) + (subject.places?.[index] ?? ""),
+            ...(context.rival && context.raw !== undefined
+              ? [formatAxis(axis.key, context.raw[index]) + (context.places?.[index] ?? "")]
+              : []),
+          ];
+          const { x, y } = labelAt(index, axes.length, lines);
 
           return (
-            <text
-              key={axis.key}
-              x={x}
-              y={y - lift}
-              textAnchor="middle"
-              className="text-[9px]"
-            >
+            <text key={axis.key} x={x} y={y} textAnchor="middle" className="text-[9px]">
               <tspan className="fill-ink-dim uppercase">{axis.label}</tspan>
               <tspan
                 x={x}

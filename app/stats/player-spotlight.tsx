@@ -8,6 +8,7 @@ import { PlayerName } from "@/components/player-name";
 import { inputStyles } from "@/components/ui";
 import {
   countsFor,
+  gameScore,
   pairKey,
   type ChampionRecord,
   type GameHighlight,
@@ -287,7 +288,12 @@ export function PlayerSpotlight({
                   b={rival.kda === null ? "—" : rival.kda.toFixed(1)}
                   better={compare(player.kda, rival.kda)}
                 />
-                <Facing label="Per game" a={perGameOf(player)} b={perGameOf(rival)} />
+                <Facing
+                  label="Per game"
+                  a={perGameOf(player)}
+                  b={perGameOf(rival)}
+                  better={compare(perGameScore(player), perGameScore(rival))}
+                />
                 <Facing
                   label="Kill participation"
                   a={participationOf(player)}
@@ -298,6 +304,7 @@ export function PlayerSpotlight({
                   label="Best game"
                   a={scoreline(player.best)}
                   b={scoreline(rival.best)}
+                  better={compare(bestScore(player), bestScore(rival))}
                 />
               </dl>
             )}
@@ -471,6 +478,23 @@ const rateOf = (p: PlayerProfile) => (p.decided === 0 ? null : p.wins / p.decide
 function winRateOf(p: PlayerProfile): string {
   const rate = rateOf(p);
   return rate === null ? "—" : `${Math.round(rate * 100)}%`;
+}
+
+/**
+ * Both of these are read with `gameScore` — kills, assists at half, deaths
+ * taken off — which is how the site already decides whose game was better.
+ * A line of three numbers has no order until something says what counts.
+ */
+const bestScore = (p: PlayerProfile) => (p.best === null ? null : gameScore(p.best));
+
+function perGameScore(p: PlayerProfile): number | null {
+  if (p.games === 0) return null;
+  return gameScore({
+    kills: p.kills,
+    deaths: p.deaths,
+    assists: p.assists,
+    championId: null,
+  }) / p.games;
 }
 
 function perGameOf(p: PlayerProfile): string {
