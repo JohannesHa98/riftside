@@ -270,7 +270,8 @@ export function PlayerSpotlight({
                 <Tile
                   label="Kill participation"
                   value={participationOf(player)}
-                  note="of their team's kills"
+                  // Participation already implies the team; assists do not.
+                  note="their kills + assists"
                 />
               </div>
             ) : (
