@@ -243,6 +243,35 @@ export function PlayerSpotlight({
               </div>
             ) : (
               <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Tile
+                    label="Head to head"
+                    value={
+                      record === null || record.against.games === 0
+                        ? "—"
+                        : scoreOf(record.against, player.playerId, rival.playerId)
+                    }
+                    note={
+                      record === null || record.against.games === 0
+                        ? "never on opposite sides"
+                        : `${record.against.games} game${record.against.games === 1 ? "" : "s"} against each other`
+                    }
+                  />
+                  <Tile
+                    label="As teammates"
+                    value={
+                      record === null || record.together.games === 0
+                        ? "—"
+                        : `${record.together.wins}W–${record.together.games - record.together.wins}L`
+                    }
+                    note={
+                      record === null || record.together.games === 0
+                        ? "never on the same side"
+                        : `${record.together.games} game${record.together.games === 1 ? "" : "s"} together`
+                    }
+                  />
+                </div>
+
                 <dl className="divide-y divide-line overflow-hidden rounded-md border border-line">
                 <Facing label="Games" a={`${player.decided}`} b={`${rival.decided}`} />
                 <Facing
@@ -276,35 +305,6 @@ export function PlayerSpotlight({
                   better={compare(bestScore(player), bestScore(rival))}
                 />
               </dl>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Tile
-                    label="Head to head"
-                    value={
-                      record === null || record.against.games === 0
-                        ? "—"
-                        : scoreOf(record.against, player.playerId, rival.playerId)
-                    }
-                    note={
-                      record === null || record.against.games === 0
-                        ? "never on opposite sides"
-                        : `${record.against.games} game${record.against.games === 1 ? "" : "s"} against each other`
-                    }
-                  />
-                  <Tile
-                    label="As teammates"
-                    value={
-                      record === null || record.together.games === 0
-                        ? "—"
-                        : `${record.together.wins}W–${record.together.games - record.together.wins}L`
-                    }
-                    note={
-                      record === null || record.together.games === 0
-                        ? "never on the same side"
-                        : `${record.together.games} game${record.together.games === 1 ? "" : "s"} together`
-                    }
-                  />
-                </div>
               </>
             )}
 
