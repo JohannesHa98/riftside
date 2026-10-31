@@ -31,6 +31,9 @@ const RADIUS = 88;
 const LABEL_GAP = 14;
 /** Roughly how wide a character is at the size the figures are set in. */
 const CHAR_WIDTH = 5.9;
+/** How far the ink of a line reaches above and below its own baseline. */
+const ASCENT = 6.5;
+const DESCENT = 2.5;
 const RINGS = [0.25, 0.5, 0.75, 1];
 /** One line of label text, in viewBox units. */
 const LINE_HEIGHT = 11;
@@ -72,13 +75,17 @@ function labelAt(axis: number, count: number, lines: string[]) {
     // A line of text is shorter than the leading it sits in.
     Math.abs(Math.sin(angle)) * halfHeight * 0.85;
 
-  // The text block grows downwards from its first baseline, so lift it by
-  // half its height to centre it on the point.
   const centreY = CENTRE_Y + Math.sin(angle) * reach;
+
+  // Centre the ink, not the baselines. A text block grows downwards from its
+  // first baseline, so placing that baseline on the point leaves the block
+  // hanging below it — which reads as a wide gap under the chart and a tight
+  // one above it, the same labels at the same distance looking uneven.
+  const inkDrop = ((lines.length - 1) * LINE_HEIGHT + DESCENT - ASCENT) / 2;
 
   return {
     x: CENTRE_X + Math.cos(angle) * reach,
-    y: centreY - halfHeight + LINE_HEIGHT,
+    y: centreY - inkDrop,
   };
 }
 
