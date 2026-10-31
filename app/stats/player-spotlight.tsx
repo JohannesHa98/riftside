@@ -16,7 +16,12 @@ import {
   type SpotlightAxis,
 } from "@/db/queries";
 
-import { Radar, RadarLegend, type RadarContext } from "./radar";
+import {
+  Radar,
+  RadarLegend,
+  type RadarContext,
+  type RadarSubject,
+} from "./radar";
 import { SPOTLIGHT_ANCHOR, spotlightUrl } from "./spotlight-link";
 
 /** How many champions the spotlight lists under "Plays most". */
@@ -92,7 +97,7 @@ export function PlayerSpotlight({
 
   const record =
     rival === null ? null : (pairs[pairKey(player.playerId, rival.playerId)] ?? null);
-  const view = comparable(player, rival, average);
+  const view = comparable(player, rival, average, players);
 
   return (
     <section id={SPOTLIGHT_ANCHOR} className="mt-8 scroll-mt-4">
@@ -107,7 +112,7 @@ export function PlayerSpotlight({
               <PlayerName
                 name={player.name}
                 riotId={player.riotId}
-                className="text-xl font-semibold"
+                className={`text-xl font-semibold ${rival === null ? "" : "text-gold"}`}
               />
               {rival === null ? null : (
                 <>
@@ -214,7 +219,9 @@ export function PlayerSpotlight({
         )}
 
         <div
-          className={`grid gap-6 lg:grid-cols-[auto_1fr] ${
+          // A fixed first column rather than auto: the chart is a w-full
+          // svg, which an auto column sizes from nothing and squashes.
+          className={`grid gap-6 lg:grid-cols-[23rem_1fr] ${
             // Six rows of figures are shorter than the chart, so centring them
             // reads as deliberate where top-aligning reads as a mistake.
             rival === null ? "" : "lg:items-center"
@@ -338,6 +345,36 @@ export function PlayerSpotlight({
   );
 }
 
+/** Lower is better on exactly one axis. */
+const LOWER_IS_BETTER = new Set(["survival"]);
+
+function ordinal(place: number): string {
+  const tens = place % 100;
+  if (tens >= 11 && tens <= 13) return `${place}th`;
+  return `${place}${["th", "st", "nd", "rd"][place % 10] ?? "th"}`;
+}
+
+/**
+ * Where one player's figure places among everyone measured the same way.
+ *
+ * Only players who share that axis are counted — a support's vision is ranked
+ * against the other supports, never against the laners' CS, which is the same
+ * rule the chart itself is scaled by.
+ */
+function places(players: PlayerProfile[], subject: PlayerProfile): string[] {
+  const played = players.filter((entry) => entry.games > 0);
+
+  return subject.axes.map((axis, index) => {
+    const field = played.filter((entry) => entry.axes[index].key === axis.key);
+    const mine = subject.raw[index];
+    const better = LOWER_IS_BETTER.has(axis.key)
+      ? (value: number) => value < mine
+      : (value: number) => value > mine;
+
+    return ordinal(field.filter((entry) => better(entry.raw[index])).length + 1);
+  });
+}
+
 /** Axis keys in the words a player would use for them. */
 const MEASURES: Record<string, string> = {
   farming: "CS",
@@ -358,20 +395,30 @@ function comparable(
   player: PlayerProfile,
   rival: PlayerProfile | null,
   average: number[],
+  everyone: PlayerProfile[],
 ): {
   axes: SpotlightAxis[];
-  subject: { name: string; values: number[]; raw: number[] };
+  subject: RadarSubject;
   context: RadarContext;
   dropped: string | null;
 } {
+  const standing = places(everyone, player);
+
   if (rival === null) {
     return {
       axes: player.axes,
-      subject: { name: player.name, values: player.radar, raw: player.raw },
+      subject: {
+        name: player.name,
+        values: player.radar,
+        raw: player.raw,
+        places: standing,
+      },
       context: { name: "Everyone's average", values: average, rival: false },
       dropped: null,
     };
   }
+
+  const rivalStanding = places(everyone, rival);
 
   const shared = player.axes
     .map((axis, index) => index)
@@ -396,11 +443,13 @@ function comparable(
       name: player.name,
       values: shared.map((index) => player.radar[index]),
       raw: shared.map((index) => player.raw[index]),
+      places: shared.map((index) => standing[index]),
     },
     context: {
       name: rival.name,
       values: shared.map((index) => rival.radar[index]),
       raw: shared.map((index) => rival.raw[index]),
+      places: shared.map((index) => rivalStanding[index]),
       rival: true,
     },
     dropped: odd.length === 0 ? null : odd.join(" and "),

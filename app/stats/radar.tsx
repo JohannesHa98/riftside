@@ -18,11 +18,19 @@ export function formatAxis(key: string, value: number): string {
   }
 }
 
-const SIZE = 300;
+/*
+ * The drawing is wider than it is tall-looking: the rings only take the
+ * middle, and the rest is room for labels that now carry a figure and its
+ * placing, centred, on both sides of the chart.
+ */
+const SIZE = 340;
 const CENTRE = SIZE / 2;
 const RADIUS = 88;
-/** Where the axis labels sit, just outside the outer ring. */
-const LABEL_DISTANCE = 1.18;
+/**
+ * Where the axis labels sit. Far enough out that a centred label clears the
+ * outer ring on both sides — they used to hug the ring and hang off one edge.
+ */
+const LABEL_DISTANCE = 1.32;
 const RINGS = [0.25, 0.5, 0.75, 1];
 /** One line of label text, in viewBox units. */
 const LINE_HEIGHT = 11;
@@ -52,6 +60,8 @@ export interface RadarSubject {
   values: number[];
   /** The same axes unscaled, for the labels. */
   raw: number[];
+  /** Where each figure places among everyone measured that way: "1st". */
+  places?: string[];
 }
 
 /**
@@ -64,6 +74,7 @@ export interface RadarContext {
   /** True when this is another player rather than the group. */
   rival: boolean;
   raw?: number[];
+  places?: string[];
 }
 
 /**
@@ -96,7 +107,7 @@ export function Radar({
     <figure className="m-0">
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
-        className="w-full max-w-80"
+        className="w-full max-w-96"
         role="img"
         aria-label={`${described} across ${axes.map((a) => a.label).join(", ")}`}
       >
@@ -146,9 +157,6 @@ export function Radar({
 
         {axes.map((axis, index) => {
           const { x, y } = pointAt(index, axes.length, LABEL_DISTANCE);
-          // Anchor by which side of the circle the label is on, so nothing
-          // runs back over the chart.
-          const anchor = x < CENTRE - 1 ? "end" : x > CENTRE + 1 ? "start" : "middle";
           // A label above the chart grows downwards, towards it. Comparing two
           // players adds a second line, so those labels start a line higher
           // and the numbers stay outside the rings.
@@ -159,7 +167,7 @@ export function Radar({
               key={axis.key}
               x={x}
               y={y - lift}
-              textAnchor={anchor}
+              textAnchor="middle"
               className="text-[9px]"
             >
               <tspan className="fill-ink-dim uppercase">{axis.label}</tspan>
@@ -169,6 +177,11 @@ export function Radar({
                 className="fill-ink text-[11px] font-semibold [font-variant-numeric:tabular-nums]"
               >
                 {formatAxis(axis.key, subject.raw[index])}
+                {subject.places?.[index] === undefined ? null : (
+                  <tspan className="fill-ink-dim text-[9px] font-normal">
+                    {` (${subject.places[index]})`}
+                  </tspan>
+                )}
               </tspan>
               {context.rival && context.raw !== undefined ? (
                 <tspan
@@ -177,6 +190,11 @@ export function Radar({
                   className="fill-blue-side text-[11px] font-semibold [font-variant-numeric:tabular-nums]"
                 >
                   {formatAxis(axis.key, context.raw[index])}
+                  {context.places?.[index] === undefined ? null : (
+                    <tspan className="fill-ink-dim text-[9px] font-normal">
+                      {` (${context.places[index]})`}
+                    </tspan>
+                  )}
                 </tspan>
               ) : null}
             </text>
