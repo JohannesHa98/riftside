@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  check:
+    name: Lint, types, tests, build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      # Every test is a pure function — the balancer, the ingest rules, the
+      # role assignment, hashing, and the companion's parser against saved
+      # client responses. Nothing here reaches for a database.
+      - run: npm test
+
+      # The build needs the variables to exist, not to work: `cacheComponents`
+      # defers every database read to request time, so nothing connects while
+      # the pages are being prerendered.
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+          AUTH_SECRET: ci-secret-that-is-long-enough-to-be-accepted
+          ADMIN_PASSWORD_HASH: scrypt.16384.8.1.placeholder.placeholder
+          INGEST_SECRET: ci
