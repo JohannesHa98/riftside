@@ -228,7 +228,7 @@ site gets opened for.
    (`?against=`): their record against each other, their record as
    teammates, both shapes on one chart and the stats facing each other.
    An axis the two are not measured on the same way — farming against
-   vision — is left out rather than compared. Every name on this page puts
+   vision — is dropped rather than compared, leaving a five-sided chart. Every name on this page puts
    that player in the spotlight rather
    than leaving the site: the selection lives in `?player=<name>`, which is how a
    name rendered on the server in its own Suspense boundary reaches the

@@ -154,14 +154,26 @@ export function PlayerSpotlight({
               )}
             </p>
             {/*
-              Kept in both: without it the panel would be a line shorter when
-              comparing, and choosing an opponent would shift the page.
+              Something on this line in both views, or the panel would be
+              shorter when comparing and the page would shift. Games are
+              counted in the figures opposite, so a comparison says where the
+              two stand on the ladder instead.
             */}
             <p className="mt-0.5 text-sm text-ink-dim">
-              {player.games} game{player.games === 1 ? "" : "s"}
-              {player.games > player.decided
-                ? ` · ${player.games - player.decided} unfinished`
-                : ""}
+              {rival === null ? (
+                <>
+                  {player.games} game{player.games === 1 ? "" : "s"}
+                  {player.games > player.decided
+                    ? ` · ${player.games - player.decided} unfinished`
+                    : ""}
+                </>
+              ) : (
+                <>
+                  <span className="text-gold/70">{standing(player)}</span>
+                  {" · "}
+                  <span className="text-blue-side/70">{standing(rival)}</span>
+                </>
+              )}
             </p>
           </div>
 
@@ -204,11 +216,8 @@ export function PlayerSpotlight({
               keeps only the axes they share — see `comparable`.
             */}
             <Radar axes={view.axes} subject={view.subject} context={view.context} />
-            <div className="mt-3 space-y-1">
+            <div className="mt-3">
               <RadarLegend subject={player.name} context={view.context} />
-              {view.dropped === null ? null : (
-                <p className="text-xs text-ink-dim">{view.dropped} left out.</p>
-              )}
             </div>
           </div>
 
@@ -383,14 +392,6 @@ function places(players: PlayerProfile[], subject: PlayerProfile): string[] {
   });
 }
 
-/** Axis keys in the words a player would use for them. */
-const MEASURES: Record<string, string> = {
-  farming: "CS",
-  vision: "vision score",
-  survival: "deaths",
-  winRate: "win rate",
-};
-
 /**
  * The axes two players can honestly be drawn on together.
  *
@@ -408,7 +409,6 @@ function comparable(
   axes: SpotlightAxis[];
   subject: RadarSubject;
   context: RadarContext;
-  dropped: string | null;
 } {
   const standing = places(everyone, player);
 
@@ -422,7 +422,6 @@ function comparable(
         places: standing,
       },
       context: { name: "Everyone's average", values: average, rival: false },
-      dropped: null,
     };
   }
 
@@ -435,16 +434,6 @@ function comparable(
   // Name the measures rather than the slot: "CS and vision score left out"
   // says what happened, where "Farming is left off" asks the reader to work
   // out which axis that was and why it would not sit beside the other one.
-  const odd = [...new Set(
-    player.axes
-      .flatMap((_, index) =>
-        shared.includes(index)
-          ? []
-          : [player.axes[index].key, rival.axes[index].key],
-      )
-      .map((key) => MEASURES[key] ?? key),
-  )];
-
   return {
     axes: shared.map((index) => player.axes[index]),
     subject: {
@@ -460,7 +449,6 @@ function comparable(
       places: shared.map((index) => rivalStanding[index]),
       rival: true,
     },
-    dropped: odd.length === 0 ? null : odd.join(" and "),
   };
 }
 
@@ -473,6 +461,10 @@ function scoreOf(
   const wins = countsFor(player, rival) ? against.wins : against.games - against.wins;
   return `${wins}–${against.games - wins}`;
 }
+
+/** Where someone sits on the ladder, in words. */
+const standing = (p: PlayerProfile) =>
+  p.rank === null ? "unranked" : `rank ${p.rank}`;
 
 const rateOf = (p: PlayerProfile) => (p.decided === 0 ? null : p.wins / p.decided);
 
