@@ -20,12 +20,19 @@ export function formatAxis(key: string, value: number): string {
 
 /*
  * Wider than it is tall: the rings take the middle, and the rest is room for
- * labels carrying a figure and its placing.
+ * labels carrying a figure and its placing. The width is set by how wide a
+ * label can get; the height is worked out from how many lines they hold, so
+ * the drawing has no empty band above it when they hold fewer.
  */
 const WIDTH = 380;
-const HEIGHT = 344;
 const CENTRE_X = WIDTH / 2;
-const CENTRE_Y = HEIGHT / 2;
+/** A hair of room outside the outermost label, so nothing sits on the edge. */
+const EDGE_MARGIN = 3;
+
+/** How far the topmost and bottommost labels reach from the middle. */
+function verticalReach(lines: number): number {
+  return RADIUS + LABEL_GAP + lines * LINE_HEIGHT;
+}
 /*
  * As large as the labels allow: the rings and the room around them share
  * one canvas, and the labels need only what they need.
@@ -47,11 +54,11 @@ function angleOf(axis: number, count: number): number {
   return (Math.PI * 2 * axis) / count - Math.PI / 2;
 }
 
-function pointAt(axis: number, count: number, distance: number) {
+function pointAt(axis: number, count: number, distance: number, centreY: number) {
   const angle = angleOf(axis, count);
   return {
     x: CENTRE_X + Math.cos(angle) * RADIUS * distance,
-    y: CENTRE_Y + Math.sin(angle) * RADIUS * distance,
+    y: centreY + Math.sin(angle) * RADIUS * distance,
   };
 }
 
@@ -65,7 +72,7 @@ function pointAt(axis: number, count: number, distance: number) {
  * few lines tall. Both fall out of projecting the label's own half-width and
  * half-height onto the direction its axis runs in.
  */
-function labelAt(axis: number, count: number, lines: string[]) {
+function labelAt(axis: number, count: number, lines: string[], centreY: number) {
   const angle = angleOf(axis, count);
 
   const widest = Math.max(...lines.map((line) => line.length));
@@ -84,7 +91,7 @@ function labelAt(axis: number, count: number, lines: string[]) {
 
   const reach = RADIUS + LABEL_GAP + toEdge;
 
-  const centreY = CENTRE_Y + Math.sin(angle) * reach;
+  const middle = centreY + Math.sin(angle) * reach;
 
   // Centre the ink, not the baselines. A text block grows downwards from its
   // first baseline, so placing that baseline on the point leaves the block
@@ -94,14 +101,14 @@ function labelAt(axis: number, count: number, lines: string[]) {
 
   return {
     x: CENTRE_X + Math.cos(angle) * reach,
-    y: centreY - inkDrop,
+    y: middle - inkDrop,
   };
 }
 
-function polygon(values: number[]): string {
+function polygon(values: number[], centreY: number): string {
   return values
     .map((value, axis) => {
-      const { x, y } = pointAt(axis, values.length, value);
+      const { x, y } = pointAt(axis, values.length, value, centreY);
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
@@ -157,10 +164,16 @@ export function Radar({
     ? `${subject.name} against ${context.name}`
     : `${subject.name}'s profile`;
 
+  // Every label holds its axis and a figure, and a second figure when there
+  // is someone to compare with. The canvas is cut to fit them.
+  const lines = context.rival && context.raw !== undefined ? 3 : 2;
+  const height = 2 * (verticalReach(lines) + EDGE_MARGIN);
+  const centreY = height / 2;
+
   return (
     <figure className="m-0">
       <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        viewBox={`0 0 ${WIDTH} ${height}`}
         className="w-full"
         role="img"
         aria-label={`${described} across ${axes.map((a) => a.label).join(", ")}`}
@@ -168,19 +181,19 @@ export function Radar({
         {RINGS.map((ring) => (
           <polygon
             key={ring}
-            points={polygon(axes.map(() => ring))}
+            points={polygon(axes.map(() => ring), centreY)}
             className="fill-none stroke-line"
             strokeWidth={1}
           />
         ))}
 
         {axes.map((axis, index) => {
-          const { x, y } = pointAt(index, axes.length, 1);
+          const { x, y } = pointAt(index, axes.length, 1, centreY);
           return (
             <line
               key={axis.key}
               x1={CENTRE_X}
-              y1={CENTRE_Y}
+              y1={centreY}
               x2={x}
               y2={y}
               className="stroke-line"
@@ -191,7 +204,7 @@ export function Radar({
 
         {/* The context first, so the subject sits on top of it. */}
         <polygon
-          points={polygon(context.values)}
+          points={polygon(context.values, centreY)}
           className={
             context.rival
               ? "fill-blue-side/15 stroke-blue-side"
@@ -203,7 +216,7 @@ export function Radar({
         />
 
         <polygon
-          points={polygon(subject.values)}
+          points={polygon(subject.values, centreY)}
           className="fill-gold/20 stroke-gold"
           strokeWidth={2}
           strokeLinejoin="round"
@@ -211,14 +224,14 @@ export function Radar({
 
         {axes.map((axis, index) => {
           // Every line the label will hold, so it can be placed by its size.
-          const lines = [
+          const label = [
             axis.label,
             formatAxis(axis.key, subject.raw[index]) + (subject.places?.[index] ?? ""),
             ...(context.rival && context.raw !== undefined
               ? [formatAxis(axis.key, context.raw[index]) + (context.places?.[index] ?? "")]
               : []),
           ];
-          const { x, y } = labelAt(index, axes.length, lines);
+          const { x, y } = labelAt(index, axes.length, label, centreY);
 
           return (
             <text key={axis.key} x={x} y={y} textAnchor="middle" className="text-[9px]">
@@ -254,7 +267,7 @@ export function Radar({
         })}
 
         {subject.values.map((value, index) => {
-          const { x, y } = pointAt(index, subject.values.length, value);
+          const { x, y } = pointAt(index, subject.values.length, value, centreY);
           return (
             <circle
               key={axes[index].key}

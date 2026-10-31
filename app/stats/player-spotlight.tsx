@@ -219,15 +219,13 @@ export function PlayerSpotlight({
           </div>
         )}
 
-        <div
-          // A fixed first column rather than auto: the chart is a w-full
-          // svg, which an auto column sizes from nothing and squashes.
-          className={`grid gap-6 lg:grid-cols-[26rem_1fr] ${
-            // Six rows of figures are shorter than the chart, so centring them
-            // reads as deliberate where top-aligning reads as a mistake.
-            rival === null ? "" : "lg:items-center"
-          }`}
-        >
+        {/*
+          A fixed first column rather than auto: the chart is a w-full svg,
+          which an auto column sizes from nothing and squashes. Both columns
+          start at the same line — the chart's canvas is cut to its contents,
+          so its first ink sits level with the first box beside it.
+        */}
+        <div className="grid items-start gap-6 lg:grid-cols-[26rem_1fr]">
           <div>
             {/*
               The axes come from the player, not the page: someone who mostly
