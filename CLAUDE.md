@@ -334,7 +334,10 @@ an error page.
 - Database access goes through Drizzle in `db/`; no raw SQL in components.
 - Schema changes go through `db:generate` + `db:migrate` so the SQL is tracked
   in the repo. **Never** use `drizzle-kit push`.
-- Design: clean, simple **dark** theme that suits a gaming site, mobile-first.
+- Design: clean, simple **dark** theme that suits a gaming site. Everyone uses
+  it at a desk, so that is what the layout is for — but it is kept usable on a
+  phone (burger nav, stacked line-ups, wide tables scrolling in their own
+  box) rather than breaking below `sm`.
   Light mode is opt-in via Splurrp mode in the header, which stamps
   `data-theme="light"` on `<html>`. Only the colour tokens in `globals.css`
   change, so new UI inherits both themes by using the tokens (`bg-panel`,

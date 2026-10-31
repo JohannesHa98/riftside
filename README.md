@@ -148,11 +148,10 @@ a repeat visitor, not to know who they are.
 
 - **Next.js 16** (App Router) + **React 19** + **TypeScript** in strict mode
 - **Tailwind CSS v4**, dark by default, light theme opt-in through CSS tokens
-- **Built for a phone first**, because that is where it gets used — half the
-  group picks their roles on the sofa. The nav folds into a burger, line-ups
-  stack rather than scrolling sideways, the role badges drop below the names,
-  and the one genuinely wide thing — the ladder — scrolls inside its own box
-  so the page itself never moves sideways
+- Laid out for the desktops it is actually used on, and **kept working on a
+  phone** anyway: the nav folds into a burger, line-ups stack instead of
+  running off the side, and the one genuinely wide thing — the ladder —
+  scrolls inside its own box rather than pushing the page sideways
 - **Neon Postgres** via `@neondatabase/serverless`
 - **Drizzle ORM** with tracked SQL migrations (`drizzle-kit generate`, never `push`)
 - **Vitest** — 100 tests over the balancer, ingest rules, role assignment, auth, hashing and the companion's parser
