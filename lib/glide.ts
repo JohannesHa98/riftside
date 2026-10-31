@@ -25,6 +25,25 @@ const BREATHING_ROOM = 16;
 /** Roughly a frame at 60Hz, for when real frames are not coming. */
 const TICK_MS = 16;
 
+/**
+ * Keys that scroll. Pressing one of these means "I am driving now", so the
+ * glide gets out of the way.
+ *
+ * Deliberately not every key: the keypress that *started* the glide is often
+ * still on its way up to the window when this runs — pressing Enter to pick
+ * the tenth player, say — and a glide that cancels on any key would cancel
+ * itself before it moved.
+ */
+const SCROLL_KEYS = new Set([
+  "ArrowUp",
+  "ArrowDown",
+  "PageUp",
+  "PageDown",
+  "Home",
+  "End",
+  " ",
+]);
+
 /** Fast first, settling at the end: the ordinary ease-out. */
 function eased(t: number): number {
   return 1 - (1 - t) ** 3;
@@ -47,7 +66,13 @@ export function glideTo(element: HTMLElement): void {
     if (!running) return;
     running = false;
     window.clearInterval(timer);
-    for (const event of INTERRUPTIONS) window.removeEventListener(event, stop);
+    window.removeEventListener("wheel", stop);
+    window.removeEventListener("touchstart", stop);
+    window.removeEventListener("keydown", stopOnScrollKey);
+  }
+
+  function stopOnScrollKey(event: KeyboardEvent) {
+    if (SCROLL_KEYS.has(event.key)) stop();
   }
 
   function step(now: number) {
@@ -61,10 +86,9 @@ export function glideTo(element: HTMLElement): void {
 
   // Someone taking over mid-flight wins; nothing is more annoying than a page
   // that keeps scrolling after you have grabbed it.
-  const INTERRUPTIONS = ["wheel", "touchstart", "keydown"] as const;
-  for (const event of INTERRUPTIONS) {
-    window.addEventListener(event, stop, { passive: true });
-  }
+  window.addEventListener("wheel", stop, { passive: true });
+  window.addEventListener("touchstart", stop, { passive: true });
+  window.addEventListener("keydown", stopOnScrollKey, { passive: true });
 
   const timer = window.setInterval(() => step(performance.now()), TICK_MS);
 
