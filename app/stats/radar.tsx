@@ -68,12 +68,17 @@ function labelAt(axis: number, count: number, lines: string[]) {
   const halfWidth = (widest * CHAR_WIDTH) / 2;
   const halfHeight = (lines.length * LINE_HEIGHT) / 2;
 
-  const reach =
-    RADIUS +
-    LABEL_GAP +
-    Math.abs(Math.cos(angle)) * halfWidth +
-    // A line of text is shorter than the leading it sits in.
-    Math.abs(Math.sin(angle)) * halfHeight * 0.85;
+  // How far from the label's centre its own edge is, along the axis: the
+  // first edge the axis line crosses, which is the side for a label beside
+  // the chart and the top for one below it. Adding both — as projecting the
+  // width and the height separately does — pushes a label out by an edge the
+  // axis never reaches, which is what left Survival and Damage adrift.
+  const toEdge = Math.min(
+    Math.abs(halfWidth / Math.cos(angle)),
+    Math.abs(halfHeight / Math.sin(angle)),
+  );
+
+  const reach = RADIUS + LABEL_GAP + toEdge;
 
   const centreY = CENTRE_Y + Math.sin(angle) * reach;
 
