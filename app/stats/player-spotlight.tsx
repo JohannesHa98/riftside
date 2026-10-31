@@ -230,10 +230,7 @@ export function PlayerSpotlight({
             <div className="mt-3 space-y-1">
               <RadarLegend subject={player.name} context={view.context} />
               {view.dropped === null ? null : (
-                <p className="text-xs text-ink-dim">
-                  {view.dropped} is left off: they are not measured the same way
-                  for both of them.
-                </p>
+                <p className="text-xs text-ink-dim">{view.dropped} left out.</p>
               )}
             </div>
           </div>
@@ -341,6 +338,14 @@ export function PlayerSpotlight({
   );
 }
 
+/** Axis keys in the words a player would use for them. */
+const MEASURES: Record<string, string> = {
+  farming: "CS",
+  vision: "vision score",
+  survival: "deaths",
+  winRate: "win rate",
+};
+
 /**
  * The axes two players can honestly be drawn on together.
  *
@@ -372,7 +377,18 @@ function comparable(
     .map((axis, index) => index)
     .filter((index) => player.axes[index].key === rival.axes[index].key);
 
-  const odd = player.axes.filter((_, index) => !shared.includes(index));
+  // Name the measures rather than the slot: "CS and vision score left out"
+  // says what happened, where "Farming is left off" asks the reader to work
+  // out which axis that was and why it would not sit beside the other one.
+  const odd = [...new Set(
+    player.axes
+      .flatMap((_, index) =>
+        shared.includes(index)
+          ? []
+          : [player.axes[index].key, rival.axes[index].key],
+      )
+      .map((key) => MEASURES[key] ?? key),
+  )];
 
   return {
     axes: shared.map((index) => player.axes[index]),
@@ -387,7 +403,7 @@ function comparable(
       raw: shared.map((index) => rival.raw[index]),
       rival: true,
     },
-    dropped: odd.length === 0 ? null : odd.map((axis) => axis.label).join(" and "),
+    dropped: odd.length === 0 ? null : odd.join(" and "),
   };
 }
 
