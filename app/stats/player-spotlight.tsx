@@ -153,14 +153,21 @@ export function PlayerSpotlight({
                 </>
               )}
             </p>
-            {rival !== null ? null : (
-              <p className="mt-0.5 text-sm text-ink-dim">
-                {player.games} game{player.games === 1 ? "" : "s"}
-                {player.games > player.decided
-                  ? ` · ${player.games - player.decided} unfinished`
-                  : ""}
-              </p>
-            )}
+            <p className="mt-0.5 text-sm text-ink-dim">
+              {player.games} game{player.games === 1 ? "" : "s"}
+              {rival === null ? (
+                player.games > player.decided ? (
+                  ` · ${player.games - player.decided} unfinished`
+                ) : null
+              ) : (
+                <>
+                  {" · "}
+                  <span className="text-blue-side/70">
+                    {rival.name} {rival.games}
+                  </span>
+                </>
+              )}
+            </p>
           </div>
 
           {/*
@@ -273,7 +280,6 @@ export function PlayerSpotlight({
                 </div>
 
                 <dl className="divide-y divide-line overflow-hidden rounded-md border border-line">
-                <Facing label="Games" a={`${player.decided}`} b={`${rival.decided}`} />
                 <Facing
                   label="Win rate"
                   a={winRateOf(player)}

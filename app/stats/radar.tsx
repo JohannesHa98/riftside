@@ -29,10 +29,14 @@ const CENTRE_X = WIDTH / 2;
 /** A hair of room outside the outermost label, so nothing sits on the edge. */
 const EDGE_MARGIN = 3;
 
+/** The most lines a label ever holds: its axis, a figure, and a rival's. */
+const MOST_LINES = 3;
+
 /** How far the topmost and bottommost labels reach from the middle. */
 function verticalReach(lines: number): number {
   return RADIUS + LABEL_GAP + lines * LINE_HEIGHT;
 }
+
 /*
  * As large as the labels allow: the rings and the room around them share
  * one canvas, and the labels need only what they need.
@@ -48,6 +52,15 @@ const DESCENT = 2.5;
 const RINGS = [0.25, 0.5, 0.75, 1];
 /** One line of label text, in viewBox units. */
 const LINE_HEIGHT = 11;
+
+/*
+ * One height for both, cut to the taller of them — a comparison, whose
+ * labels carry the extra figure. A spotlight then has a little room above
+ * and below rather than a different height: picking someone to compare with
+ * should not make the panel jump.
+ */
+const HEIGHT = 2 * (verticalReach(MOST_LINES) + EDGE_MARGIN);
+const CENTRE_Y = HEIGHT / 2;
 
 /** Start at the top and go clockwise. */
 function angleOf(axis: number, count: number): number {
@@ -164,16 +177,12 @@ export function Radar({
     ? `${subject.name} against ${context.name}`
     : `${subject.name}'s profile`;
 
-  // Every label holds its axis and a figure, and a second figure when there
-  // is someone to compare with. The canvas is cut to fit them.
-  const lines = context.rival && context.raw !== undefined ? 3 : 2;
-  const height = 2 * (verticalReach(lines) + EDGE_MARGIN);
-  const centreY = height / 2;
+  const centreY = CENTRE_Y;
 
   return (
     <figure className="m-0">
       <svg
-        viewBox={`0 0 ${WIDTH} ${height}`}
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="w-full"
         role="img"
         aria-label={`${described} across ${axes.map((a) => a.label).join(", ")}`}
