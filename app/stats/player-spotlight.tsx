@@ -222,7 +222,7 @@ export function PlayerSpotlight({
         <div
           // A fixed first column rather than auto: the chart is a w-full
           // svg, which an auto column sizes from nothing and squashes.
-          className={`grid gap-6 lg:grid-cols-[23rem_1fr] ${
+          className={`grid gap-6 lg:grid-cols-[26rem_1fr] ${
             // Six rows of figures are shorter than the chart, so centring them
             // reads as deliberate where top-aligning reads as a mistake.
             rival === null ? "" : "lg:items-center"

@@ -23,10 +23,14 @@ export function formatAxis(key: string, value: number): string {
  * labels carrying a figure and its placing.
  */
 const WIDTH = 380;
-const HEIGHT = 320;
+const HEIGHT = 344;
 const CENTRE_X = WIDTH / 2;
 const CENTRE_Y = HEIGHT / 2;
-const RADIUS = 88;
+/*
+ * As large as the labels allow: the rings and the room around them share
+ * one canvas, and the labels need only what they need.
+ */
+const RADIUS = 104;
 /** The gap every label keeps from the outer ring, whatever its size. */
 const LABEL_GAP = 14;
 /** Roughly how wide a character is at the size the figures are set in. */
@@ -157,7 +161,7 @@ export function Radar({
     <figure className="m-0">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="w-full max-w-96"
+        className="w-full"
         role="img"
         aria-label={`${described} across ${axes.map((a) => a.label).join(", ")}`}
       >
