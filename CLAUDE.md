@@ -56,6 +56,7 @@ Inside `companion/`:
 | --- | --- |
 | `npm start` | Watch the League client and send finished in-house games |
 | `npm run backfill` | Send any in-house game in recent history not sent yet |
+| `npm run backfill:list` | The same, listing what it would send instead of sending |
 | `npm run probe` | Dump what the client returns to `fixtures/raw/` and exit |
 
 ## Auth
@@ -291,6 +292,11 @@ in-game, and nothing should ever make it do so.
   four matter: a real history also holds ARAM customs (mode `KIWI`, map 12)
   and practice tool runs, which are custom games too. The ten-player check
   needs the game *detail* — the history list only carries the current summoner.
+- **Whoever is signed in is whose history gets read.** Running a backfill on
+  another player's client is how a night nobody else recorded gets in, and
+  `backfill:list` exists for that: a ten-player custom on the Rift passes
+  every test this app has, even when it was a different group entirely, so
+  the list is worth reading before anything is sent.
 - **The website is the only record of what has been sent.** The companion
   keeps no local list: one would disagree with reality the moment a game is
   deleted on the site, and re-sending is free because ingest is idempotent.

@@ -22,6 +22,7 @@ Leave it running. Start the League client whenever.
 | --- | --- |
 | `npm start` | Watch for finished games and send them |
 | `npm run backfill` | Send every in-house game in recent history that has not been sent |
+| `npm run backfill:list` | List what a backfill would send, without sending it |
 | `npm run probe` | Dump what the client returns to `fixtures/raw/` and exit |
 
 ## What counts as an in-house game

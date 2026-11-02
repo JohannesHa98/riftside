@@ -22,6 +22,13 @@ const SETTLE_GAP_MS = 5000;
 
 type Mode = "watch" | "backfill" | "probe";
 
+/**
+ * Listing instead of sending. Backfill offers every in-house game in the
+ * client's history, and whoever is signed in may have played customs with
+ * people outside the group — so there is a way to read the list first.
+ */
+const DRY_RUN = process.argv.includes("--dry-run");
+
 const MODE: Mode = process.argv.includes("--probe-only")
   ? "probe"
   : process.argv.includes("--backfill")
@@ -170,13 +177,55 @@ async function runBackfill(client: LcuClient, config: Config): Promise<void> {
   // there.
   const games = (await listCandidates(client)).reverse();
 
-  log(`Match history holds ${games.length} in-house game(s). Offering each one…`);
+  log(
+    `Match history holds ${games.length} in-house game(s). ` +
+      (DRY_RUN ? "Listing them." : "Offering each one…"),
+  );
 
   for (const game of games) {
-    await fetchAndSend(client, config, game);
+    if (DRY_RUN) await describeGame(client, config, game);
+    else await fetchAndSend(client, config, game);
   }
 
-  log("Backfill finished.");
+  log(DRY_RUN ? "Nothing was sent." : "Backfill finished.");
+}
+
+/**
+ * What backfill would send, without sending it.
+ *
+ * Prints who played, because that is the thing worth checking when the
+ * history belongs to someone else: a ten-player custom on the Rift is an
+ * in-house game by every test this app has, even if it was a different group.
+ */
+async function describeGame(
+  client: LcuClient,
+  config: Config,
+  game: HistoryGame,
+): Promise<void> {
+  const response = await client.get(`/lol-match-history/v1/games/${game.gameId}`);
+  if (response.status !== 200 || !isInHouseGame(response.body)) {
+    log(`Game ${game.gameId}: not an in-house game after all. Would skip it.`);
+    return;
+  }
+
+  let payload: GamePayload;
+  try {
+    payload = parseGame(response.body);
+  } catch (error) {
+    log(`Game ${game.gameId}: could not read it (${describe(error)}).`);
+    return;
+  }
+
+  const when = payload.playedAt.slice(0, 10);
+  const minutes = Math.round(payload.durationSeconds / 60);
+  log(`Game ${payload.gameId} — ${when}, ${minutes} min, ${payload.winner ?? "no"} side won`);
+
+  for (const side of ["blue", "red"] as const) {
+    const names = payload.participants
+      .filter((participant) => participant.side === side)
+      .map((participant) => participant.riotId);
+    log(`  ${side}: ${names.join(", ")}`);
+  }
 }
 
 async function listCandidates(client: LcuClient): Promise<HistoryGame[]> {
