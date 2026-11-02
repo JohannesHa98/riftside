@@ -374,12 +374,22 @@ function ordinal(place: number): string {
 /**
  * Where one player's figure places among everyone measured the same way.
  *
- * Only players who share that axis are counted — a support's vision is ranked
- * against the other supports, never against the laners' CS, which is the same
- * rule the chart itself is scaled by.
+ * Two rules, both borrowed from elsewhere on the page so the parenthesis
+ * agrees with the shape it sits on:
+ *
+ * - Only players who share that axis count — a support's vision is placed
+ *   against the other supports, never against the laners' CS, which is how
+ *   the chart is scaled.
+ * - Only players the ladder ranks count, which is how the chart is scaled
+ *   too. Otherwise a 100% win rate from two games outplaces an 80% from ten,
+ *   and the shape reaches the outer ring while the label says second. The
+ *   player being looked at is always in the field, so an unranked one still
+ *   gets a place.
  */
 function places(players: PlayerProfile[], subject: PlayerProfile): string[] {
-  const played = players.filter((entry) => entry.games > 0);
+  const played = players.filter(
+    (entry) => entry.rank !== null || entry.playerId === subject.playerId,
+  );
 
   return subject.axes.map((axis, index) => {
     const field = played.filter((entry) => entry.axes[index].key === axis.key);
