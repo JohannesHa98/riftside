@@ -26,7 +26,7 @@ import {
 import { SPOTLIGHT_ANCHOR, spotlightUrl } from "./spotlight-link";
 
 /** How many champions the spotlight lists under "Plays most". */
-const CHAMPIONS_SHOWN = 10;
+const CHAMPIONS_SHOWN = 9;
 
 /**
  * One player drawn against the group, or against another player.

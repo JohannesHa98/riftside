@@ -360,9 +360,19 @@ export async function spotlight(): Promise<Spotlight> {
         ? null
         : (profile.kills + profile.assists) / Math.max(profile.deaths, 1);
 
+    // Most played first; where two are played as often, the one that wins
+    // more goes above — a champion id is a tiebreak that means nothing to
+    // anyone reading it. Champions with no decided game sort last of the
+    // equals rather than first, having nothing to show.
+    const winRate = (champion: ChampionRecord) =>
+      champion.decided === 0 ? -1 : champion.wins / champion.decided;
+
     profile.champions = [...totals.champions]
       .map(([championId, record]) => ({ championId, ...record }))
-      .sort((a, b) => b.games - a.games || a.championId - b.championId);
+      .sort(
+        (a, b) =>
+          b.games - a.games || winRate(b) - winRate(a) || a.championId - b.championId,
+      );
 
     // More games on support than off it, and vision to show for them: the
     // farming slot becomes a vision slot, for this player alone.
