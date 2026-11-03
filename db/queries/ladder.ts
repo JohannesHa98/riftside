@@ -112,6 +112,11 @@ export async function playerStats(): Promise<PlayerStats[]> {
   // same record over the same number of games are genuinely level on the
   // thing the ladder measures, so the tiebreak asks how they got there rather
   // than falling back on the alphabet.
+  //
+  // The rate is compared as the page prints it, to the whole percent. Eleven
+  // from eighteen and eight from thirteen are both 61%, and ordering those by
+  // a decimal nobody can see makes the ladder look as though it has ignored
+  // its own tiebreak.
   const byMerit = (a: PlayerStats, b: PlayerStats) =>
     (kdaRatio(b) ?? 0) - (kdaRatio(a) ?? 0) || a.name.localeCompare(b.name);
 
@@ -124,9 +129,7 @@ export async function playerStats(): Promise<PlayerStats[]> {
     if (!rankedA) return b.decided - a.decided || byMerit(a, b);
 
     return (
-      (winRate(b) ?? 0) - (winRate(a) ?? 0) ||
-      b.decided - a.decided ||
-      byMerit(a, b)
+      shownWinRate(b) - shownWinRate(a) || b.decided - a.decided || byMerit(a, b)
     );
   });
 }
@@ -139,6 +142,12 @@ export function kdaRatio(stats: PlayerStats): number | null {
 
 export function winRate(stats: PlayerStats): number | null {
   return stats.decided === 0 ? null : stats.wins / stats.decided;
+}
+
+/** The win rate as the ladder shows it: a whole percent, or nothing. */
+function shownWinRate(stats: PlayerStats): number {
+  const rate = winRate(stats);
+  return rate === null ? -1 : Math.round(rate * 100);
 }
 
 /**
