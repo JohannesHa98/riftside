@@ -225,16 +225,24 @@ site gets opened for.
 2. **Players** — list, add, edit, delete players with power level and per-role comfort
 3. **History** — past games, and deleting one
 4. **Stats** — the ladder, odds and ends, and a per-player spotlight with a
-   radar, which becomes a head to head when a second player is chosen
-   (`?against=`): their record against each other, their record as
-   teammates, both shapes on one chart and the stats facing each other.
-   An axis the two are not measured on the same way — farming against
-   vision — is dropped rather than compared, leaving a five-sided chart. Every name on this page puts
-   that player in the spotlight rather
-   than leaving the site: the selection lives in `?player=<name>`, which is how a
-   name rendered on the server in its own Suspense boundary reaches the
-   spotlight's client state. The one name that still links to dpm.lol is the
-   spotlight's own heading, where selecting would do nothing.
+   radar.
+   - **The ladder compares the win rate it prints**, rounded to the whole
+     percent. 11/18 and 8/13 are both 61%, and separating those by a decimal
+     nobody can see looks like the tiebreak — whoever held the rate over more
+     games — being ignored.
+   - **Every name on the page opens that player's spotlight** rather than
+     leaving the site. The selection lives in `?player=<name>`, which is how
+     a name rendered on the server in its own Suspense boundary reaches the
+     panel's client state; it also makes a spotlight linkable.
+   - **Choosing a second player (`?against=`) makes it a head to head**:
+     their record against each other, their record as teammates, both shapes
+     on one chart, and the figures facing each other. An axis the two are not
+     measured on the same way — farming against vision — is dropped rather
+     than compared, leaving a five-sided chart.
+   - **The chart is scaled, and its figures placed, against the players the
+     ladder ranks.** Both, or the shape reaches the outer ring while the
+     figure under it says second, because a 100% win rate from two games
+     outplaced an 81% from ten.
 
 ## Planned later (do not build yet, but do not design it out)
 
